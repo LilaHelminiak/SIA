@@ -125,7 +125,8 @@ class Crane:
 			freeY = randrange(-self.reach, self.reach+1) + self.position[0]
 			freeX = randrange(-self.reach, self.reach+1) + self.position[1]
 			free = (freeY, freeX)
-			if free != pos and self.map.inRange(free) and self.map.map[freeY][freeX].type == Field.STORAGE_TYPE:
+			f = self.map.map[freeY][freeX]
+			if free != pos and self.map.inRange(free) and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, free)
 
@@ -137,23 +138,32 @@ class Crane:
 			commonY = topLeft[0] + randrange(0, h)
 			commonX = topLeft[1] + randrange(0, w)
 			common = (commonY,commonX)
-			if common != self.position and common != crane.position and self.map.inRange(common) and self.map.map[commonY][commonX].type == Field.STORAGE_TYPE:
+			f = self.map.map[commonY][commonX]
+			if common != self.position and common != crane.position and self.map.inRange(common) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, common)
 	
 	def loadShip(self, pos):
 		randY = randrange(-self.reach, self.reach)
-		shipPos = (self.position[0] + randY, self.map.colNum-1)
+		shipPos = None
+		while True:
+			shipY = randrange(-self.reach, self.reach+1) + self.position[0]
+			shipX = self.map.colNum-1
+			shipPos = (shipY, shipX)
+			f = self.map.map[shipY][shipX]
+			if shipPos != self.position and self.map.inRange(shipPos) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+				break
 		return self.moveContainer(pos, shipPos)
 	
 	def keepBusy(self):
 		rotate = ((pi/2 - self.angle + pi) % (2*pi)) - pi
 		return [(MOVE_ARM, [rotate, self.hookDistance])]
 
-	def informOthers(self):
-		for c in self.neighbours:
+	def informOthers(self, recipients):
+		for c in recipients:
 			if c not in self.toShip:
-				c.addMessage(Message(self, Message.HAVE_SHIP_PATH, []))
+				res = c.addMessage(Message(self, Message.HAVE_SHIP_PATH, []))
+				print self.id, "I have informed", c.id, "with res", res
 
 	def startMeasureTime(self, containerId, craneId):
 		self.inWay[containerId] = (craneId, time())
@@ -169,6 +179,8 @@ class Crane:
 
 	def addNeighbours(self, l):
 		self.neighbours.extend(l)
+		if self.directToShip or self.toShip:
+			self.informOthers(l)
 
 	def examineSurroundings(self):
 		self.onMyArea.clear()
@@ -199,7 +211,7 @@ class Crane:
 		elif msg.type == Message.HAVE_SHIP_PATH:
 			self.toShip.append(msg.sender)
 			print self.id, "To ship through", msg.sender.id
-			self.informOthers()
+			self.informOthers(self.neighbours)
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
@@ -260,7 +272,7 @@ class Crane:
 		if self.directToShip == 1:
 			self.directToShip = 2
 			print self.id, "I'm near ship! Must tell others!"
-			self.informOthers()
+			self.informOthers(self.neighbours)
 		
 		if not self.tasks and not self.instructions:
 			if self.toShip or self.directToShip:

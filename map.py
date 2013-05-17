@@ -13,6 +13,8 @@ class Map:
 		self.map = [[Field(Field.STORAGE_TYPE, []) for col in xrange(colNum)] for row in xrange(rowNum)]
 		
 		self.map[0][0] = Field(Field.STORAGE_TYPE, [Crate(1, 3), Crate(5, 2), Crate(22, 3)])
+		self.map[2][6] = Field(Field.STORAGE_TYPE, [Crate(11, 3), Crate(12, 2), Crate(13, 3), Crate(10,1)])
+		self.map[4][6] = Field(Field.STORAGE_TYPE, [Crate(14, 3), Crate(15, 2), Crate(16, 3), Crate(17,2)])
 		self.map[4][4] = Field(Field.STORAGE_TYPE, [Crate(8, 3), Crate(772, 2)])
 		self.map[3][2] = Field(Field.STORAGE_TYPE, [Crate(7, 3), Crate(432,3), Crate(433,1)])
 		self.map[6][2] = Field(Field.STORAGE_TYPE, [Crate(2, 3), Crate(32,3), Crate(33,1)])
