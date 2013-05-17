@@ -5,13 +5,13 @@ from math import sqrt, atan2, cos, sin, pi
 from time import sleep, time
 from message import Message
 from field import Field
-from random import randrange
+from random import randrange, choice
 
 (MOVE_ARM, HOOK_UP, HOOK_DOWN, GRAB, DROP, NOTHING) = range(10, 16)
 (TAKE_OFF, PASS_ON, LOAD_SHIP, KEEP_BUSY) = range(20,24)
 
 class Crane:
-	def __init__(self, id, position, rangeSight, reach, height, neighbours, map):
+	def __init__(self, id, position, rangeSight, reach, height, map):
 		self.id = id
 		self.position = position
 		self.rangeSight = rangeSight
@@ -20,7 +20,7 @@ class Crane:
 		self.angle = 0 # in radians, clockwise
 		self.hookDistance = 1
 		self.hookHeight   = height
-		self.neighbours   = neighbours
+		self.neighbours   = []
 		self.map = map
 
 		self.crate = None
@@ -49,42 +49,42 @@ class Crane:
 			if abs(dist) > abs(distStep):
 				self.hookDistance += distStep
 				dist -= distStep
-			sleep(0.03)
+			sleep(0.02)
 		self.angle += alfa
 
 		while abs(dist) > abs(distStep):
 			self.hookDistance += distStep
 			dist -= distStep
-			sleep(0.03)
+			sleep(0.02)
 		self.hookDistance += dist
 	
 	def hookDown(self, dist):
-		distStep = 0.5
+		distStep = 0.7
 		while dist > distStep:
 			self.hookHeight -= distStep
 			dist -= distStep
-			sleep(0.03)
+			sleep(0.02)
 		self.hookHeight -= dist
-		sleep(0.03)
+		sleep(0.02)
 
 	def hookUp(self, dist):
-		distStep = 0.5
+		distStep = 0.7
 		while dist > distStep:
 			self.hookHeight += distStep
 			dist -= distStep
-			sleep(0.03)
+			sleep(0.02)
 		self.hookHeight += dist
-		sleep(0.03)
+		sleep(0.02)
 
 	def grab(self):
-		sleep(0.03)
+		sleep(0.02)
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
 		print self.id, "grab from", (y,x)
 		self.crate = self.map.map[y][x].removeCrateFromTop()
 	
 	def drop(self):
-		sleep(0.03)
+		sleep(0.02)
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
 		print self.id, "drop on", (y,x)
@@ -93,7 +93,6 @@ class Crane:
 
 	def doNothing(self):
 		for i in range(0,5):
-			self.angle += 0.03
 			sleep(0.05)
 
 	def moveContainer(self, pos1, pos2):
@@ -105,8 +104,9 @@ class Crane:
 
 		(rotate1, shift1) = calcAngleAndShift(pos1, self.angle, self.hookDistance)
 		(rotate2, shift2) = calcAngleAndShift(pos2, self.angle+rotate1, self.hookDistance+shift1)
-		stack1Size = 1
-		stack2Size = 0
+		(y1, x1) = pos1; (y2, x2) = pos2
+		stack1Size = self.map.map[y1][x1].countCrates()
+		stack2Size = self.map.map[y2][x2].countCrates()
 
 		return [
 			(HOOK_UP, [self.height - self.hookHeight]),
@@ -136,11 +136,9 @@ class Crane:
 		while True:
 			commonY = topLeft[0] + randrange(0, h)
 			commonX = topLeft[1] + randrange(0, w)
-			common = (commonX,commonY)
+			common = (commonY,commonX)
 			if common != self.position and common != crane.position and self.map.inRange(common) and self.map.map[commonY][commonX].type == Field.STORAGE_TYPE:
 				break
-
-		print "common field", self.id, crane.id, "-", common
 		return self.moveContainer(pos, common)
 	
 	def loadShip(self, pos):
@@ -149,7 +147,8 @@ class Crane:
 		return self.moveContainer(pos, shipPos)
 	
 	def keepBusy(self):
-		return [(NOTHING, [])]
+		rotate = ((pi/2 - self.angle + pi) % (2*pi)) - pi
+		return [(MOVE_ARM, [rotate, self.hookDistance])]
 
 	def informOthers(self):
 		for c in self.neighbours:
@@ -168,8 +167,8 @@ class Crane:
 	def addMessage(self, msg):
 		self.messages.put(msg)
 
-	def addNeighbour(self, n):
-		self.neighbours.append(n)
+	def addNeighbours(self, l):
+		self.neighbours.extend(l)
 
 	def examineSurroundings(self):
 		self.onMyArea.clear()
@@ -199,6 +198,7 @@ class Crane:
 
 		elif msg.type == Message.HAVE_SHIP_PATH:
 			self.toShip.append(msg.sender)
+			print self.id, "To ship through", msg.sender.id
 			self.informOthers()
 
 	def readMessages(self, left=5):
@@ -259,7 +259,7 @@ class Crane:
 	def doWork(self):
 		if self.directToShip == 1:
 			self.directToShip = 2
-			print self.id, "I'm near ship!"
+			print self.id, "I'm near ship! Must tell others!"
 			self.informOthers()
 		
 		if not self.tasks and not self.instructions:
@@ -271,7 +271,7 @@ class Crane:
 					if self.directToShip:
 						tasks.append((LOAD_SHIP, [pkg_pos]))
 					else:
-						nextCrane = self.toShip[0]
+						nextCrane = choice(self.toShip)
 						tasks.append((PASS_ON, [pkg_pos, nextCrane]))
 					self.tasks.extend(tasks)
 				else:
