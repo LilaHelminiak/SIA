@@ -87,6 +87,7 @@ class Crane:
 		sleep(0.03)
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
+		print self.id, "drop on", (y,x)
 		self.map.map[y][x].putCrateOnTop(self.crate)
 		self.crate = None
 
@@ -129,12 +130,18 @@ class Crane:
 		return self.moveContainer(pos, free)
 
 	def passOn(self, pos, crane):
-		(topLeft, h, w) = self.map.commonArea(self, crane)
-		commonY = topLeft[0] + randrange(0, h+1)
-		commonX = topLeft[1] + randrange(0, w+1)
-		print "passon pos", pos
-		#return self.moveContainer(pos, (commonY,commonX))
-		return self.moveContainer(pos, (3,4))
+		rect = self.map.commonArea(self, crane)
+		(topLeft, h, w) = rect
+		common = None
+		while True:
+			commonY = topLeft[0] + randrange(0, h)
+			commonX = topLeft[1] + randrange(0, w)
+			common = (commonX,commonY)
+			if common != self.position and common != crane.position and self.map.inRange(common) and self.map.map[commonY][commonX].type == Field.STORAGE_TYPE:
+				break
+
+		print "common field", self.id, crane.id, "-", common
+		return self.moveContainer(pos, common)
 	
 	def loadShip(self, pos):
 		randY = randrange(-self.reach, self.reach)
@@ -174,7 +181,8 @@ class Crane:
 						for i in xrange(len(field)):
 							self.onMyArea[field[i]] = (y, x)
 			if self.position[1] + self.reach >= self.map.colNum-1:
-				self.directToShip = 1 #maybe should be in init in order to not check it whole time
+				if self.directToShip == 0:
+					self.directToShip = 1 #maybe should be in init in order to not check it whole time
 
 	def readMessage(self, msg):
 		if msg.type == Message.SEARCH_PACKAGE:
@@ -251,6 +259,7 @@ class Crane:
 	def doWork(self):
 		if self.directToShip == 1:
 			self.directToShip = 2
+			print self.id, "I'm near ship!"
 			self.informOthers()
 		
 		if not self.tasks and not self.instructions:
@@ -258,7 +267,6 @@ class Crane:
 				pkg = self.getPackageToDeliver()
 				if pkg:
 					pkg_pos = self.onMyArea[pkg]
-					print pkg, "on pos", pkg_pos, "lvl", self.getPackageLevel(pkg)
 					tasks = [(TAKE_OFF, [pkg_pos])] * self.getPackageLevel(pkg)
 					if self.directToShip:
 						tasks.append((LOAD_SHIP, [pkg_pos]))

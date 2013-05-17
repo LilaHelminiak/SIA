@@ -8,9 +8,10 @@ if __name__ == '__main__':
 
 	map = Map(7, 7, display)
 	
-	crane1 = map.field(2, 3).getCrane()
-	crane2 = map.field(3, 5).getCrane()
-	Ship([crane1, crane2], [7, 772, 8])
+	crane1 = map.field(1, 1).getCrane()
+	crane2 = map.field(2, 3).getCrane()
+	crane3 = map.field(3, 5).getCrane()
+	Ship([crane1, crane2, crane3], [7, 772, 8, 5, 1])
 	
 	while True:
 		map.drawMap()
