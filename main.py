@@ -4,7 +4,7 @@ from map import *
 
 if __name__ == '__main__':
 
-	display = Display(800, 800, 100, 25)
+	display = Display(849, 820, 100, 25)
 
 	map = Map(7, 7, display)
 	

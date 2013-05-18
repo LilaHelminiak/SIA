@@ -6,6 +6,7 @@ class Field:
 	(STORAGE_TYPE, ROAD_TYPE, CRANE_TYPE) = range(0, 3)
 	STACK_MAX_SIZE = 4
 	
+	
 	def __init__(self, type, objectsList = []):
 		self.type = type
 		self.objectsList = objectsList
@@ -54,6 +55,7 @@ class Field:
 		if self.type == Field.CRANE_TYPE or len(self.objectsList) == Field.STACK_MAX_SIZE:
 			raise Exception("Invalid Request")
 		self.objectsList.append(crate)
+		
 		
 	def getCrane(self):
 		if self.type != Field.CRANE_TYPE:

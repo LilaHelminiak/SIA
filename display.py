@@ -1,5 +1,5 @@
 import sys
-from math import radians, sin, cos, sqrt
+from math import radians, sin, cos, sqrt, floor
 import pygame
 from pygame.locals import *
 from field import *
@@ -18,6 +18,7 @@ class Display:
 		self.width = width  # in pixels
 		self.height = height  # in pixels
 		self.fieldSize = fieldSize  # in pixels
+		self.normalizeSize()
 		
 		pygame.init()
 		self.clock = pygame.time.Clock()
@@ -29,6 +30,13 @@ class Display:
 		self.basicFont = pygame.font.SysFont(None, self.fontSize)
 		
 		self.windowSurface.fill(Display.WHITE)
+	
+	
+	def normalizeSize(self):
+		self.width = int(floor(self.width / self.fieldSize)) * self.fieldSize
+		print "new width" + str(self.width)
+		self.height = int(floor(self.height / self.fieldSize)) * self.fieldSize
+		print "newheight" + str(self.height)
 	
 	
 	def crateIdToString(self, x):
@@ -44,7 +52,7 @@ class Display:
 		cranesList = []
 		for row in xrange(map.rowNum):
 			for col in xrange(map.colNum):
-				rect = pygame.draw.rect(self.windowSurface, Display.BLACK, (10 + col * self.fieldSize, 10 + row * self.fieldSize, self.fieldSize, self.fieldSize), 1)
+				rect = pygame.draw.rect(self.windowSurface, Display.BLACK, (col * self.fieldSize, row * self.fieldSize, self.fieldSize, self.fieldSize), 1)
 				
 				if map.fieldType(row, col) == Field.CRANE_TYPE:
 					crane = map.field(row, col).getCrane()
@@ -84,16 +92,29 @@ class Display:
 			armLen = sqrt(2) * crane.reach * self.fieldSize
 			pygame.draw.line(self.windowSurface, Display.BLACK, (craneRect.centerx, craneRect.centery), (craneRect.centerx + cos(crane.angle) * armLen, craneRect.centery + sin(crane.angle) * armLen), 3)
 
-
-					
+	
 	def drawMap(self, map):
 		self.clock.tick(30)
 		
 		for event in pygame.event.get():
 			if event.type == QUIT:
+				map.stopThreads()
 				pygame.quit()
 				sys.exit()
-				
+			if event.type == KEYDOWN:
+				if event.key == K_ESCAPE:
+					map.stopThreads()
+					pygame.quit()
+					sys.exit()
+				if event.key == K_UP:
+					print "up"
+				if event.key == K_DOWN:
+					print "down"
+				if event.key == K_LEFT:
+					print "left"
+				if event.key == K_RIGHT:
+					print "right"
+					
 		self.windowSurface.fill(Display.WHITE)
 			
 		self.drawStuff(map)

@@ -32,6 +32,13 @@ class Map:
 		self.map[5][3] = Field(Field.CRANE_TYPE, [c4])
 	
 	
+	def stopThreads(self):
+		for i in xrange(self.rowNum):
+			for j in xrange(self.colNum):
+				if self.fieldType(i, j) == Field.CRANE_TYPE:
+					self.field(i, j).getCrane().stop()
+	
+	
 	def fieldType(self, row, col):
 		return self.map[row][col].type
 
@@ -39,10 +46,12 @@ class Map:
 	def field(self, row, col):
 		return self.map[row][col]
 
+		
 	def inRange(self, pos):
 		(y, x) = pos
 		return y >= 0 and x >= 0 and y < self.rowNum and x < self.colNum
 
+		
 	# Returns ((leftUpperCornerRow, leftUpperCornerCol), height, width) or None
 	def commonArea(self, crane1, crane2):
 		up = max(crane1.position[0] - crane1.reach, crane2.position[0] - crane2.reach)
