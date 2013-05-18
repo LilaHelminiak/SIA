@@ -19,6 +19,9 @@ class Display:
 		self.height = height  # in pixels
 		self.fieldSize = fieldSize  # in pixels
 		self.normalizeSize()
+		self.colsPerScreen = int(self.width / self.fieldSize)
+		self.rowsPerScreen = int(self.height / self.fieldSize)
+		self.upperLeftFieldCoors = (0, 0)
 		
 		pygame.init()
 		self.clock = pygame.time.Clock()
@@ -34,9 +37,7 @@ class Display:
 	
 	def normalizeSize(self):
 		self.width = int(floor(self.width / self.fieldSize)) * self.fieldSize
-		print "new width" + str(self.width)
 		self.height = int(floor(self.height / self.fieldSize)) * self.fieldSize
-		print "newheight" + str(self.height)
 	
 	
 	def crateIdToString(self, x):
@@ -49,10 +50,14 @@ class Display:
 	
 	
 	def drawStuff(self, map):
+		(upperLeftRow, upperLeftCol) = self.upperLeftFieldCoors
 		cranesList = []
-		for row in xrange(map.rowNum):
-			for col in xrange(map.colNum):
-				rect = pygame.draw.rect(self.windowSurface, Display.BLACK, (col * self.fieldSize, row * self.fieldSize, self.fieldSize, self.fieldSize), 1)
+		rowDisplay = 0
+		for row in xrange(upperLeftRow, min(map.rowNum, upperLeftRow + self.rowsPerScreen)):
+			colDisplay = 0
+			for col in xrange(upperLeftCol, min(map.colNum, upperLeftCol + self.colsPerScreen)):
+				rect = pygame.draw.rect(self.windowSurface, Display.BLACK, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize), 1)
+				colDisplay += 1
 				
 				if map.fieldType(row, col) == Field.CRANE_TYPE:
 					crane = map.field(row, col).getCrane()
@@ -86,34 +91,37 @@ class Display:
 					crateIdRect.centerx = rect.centerx
 					crateIdRect.centery = rect.bottom - (self.fieldSize / 4) * i - self.fontSize / 2
 					self.windowSurface.blit(crateId, crateIdRect)
+			rowDisplay += 1
 
 		for i in xrange(len(cranesList)):
 			(crane, craneRect) = (cranesList[i][0], cranesList[i][1])
 			armLen = sqrt(2) * crane.reach * self.fieldSize
 			pygame.draw.line(self.windowSurface, Display.BLACK, (craneRect.centerx, craneRect.centery), (craneRect.centerx + cos(crane.angle) * armLen, craneRect.centery + sin(crane.angle) * armLen), 3)
 
-	
+
+	def moveDisplay(self, map, position):
+		if position[0] >= 0 and position[0] + self.rowsPerScreen <= map.rowNum:
+			if position[1] >= 0 and position[1] + self.rowsPerScreen <= map.colNum + 1:
+				self.upperLeftFieldCoors = position
+
+
 	def drawMap(self, map):
 		self.clock.tick(30)
 		
 		for event in pygame.event.get():
-			if event.type == QUIT:
+			if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
 				map.stopThreads()
 				pygame.quit()
 				sys.exit()
 			if event.type == KEYDOWN:
-				if event.key == K_ESCAPE:
-					map.stopThreads()
-					pygame.quit()
-					sys.exit()
 				if event.key == K_UP:
-					print "up"
+					self.moveDisplay(map, (self.upperLeftFieldCoors[0] - 1, self.upperLeftFieldCoors[1]))
 				if event.key == K_DOWN:
-					print "down"
+					self.moveDisplay(map, (self.upperLeftFieldCoors[0] + 1, self.upperLeftFieldCoors[1]))
 				if event.key == K_LEFT:
-					print "left"
+					self.moveDisplay(map, (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[1] - 1))
 				if event.key == K_RIGHT:
-					print "right"
+					self.moveDisplay(map, (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[1] + 1))
 					
 		self.windowSurface.fill(Display.WHITE)
 			

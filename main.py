@@ -4,9 +4,9 @@ from map import *
 
 if __name__ == '__main__':
 
-	display = Display(849, 820, 100, 25)
+	display = Display(740, 750, 100, 25)
 
-	map = Map(7, 7, display)
+	map = Map(11, 7, display)
 	
 	crane1 = map.field(1, 1).getCrane()
 	crane2 = map.field(2, 3).getCrane()
@@ -16,5 +16,3 @@ if __name__ == '__main__':
 	
 	while True:
 		map.drawMap()
-		#crane1.angle = (crane1.angle + 1) % 360
-		#crane2.angle = (crane2.angle - 1) % 360
