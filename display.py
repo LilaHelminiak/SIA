@@ -47,8 +47,46 @@ class Display:
 			return "0" + str(x)
 		else:
 			return str(x)
-	
-	
+
+
+	def drawCraneBody(self, crane, rect):
+		craneRect = pygame.draw.circle(self.windowSurface, (100, 100, 100), (rect.centerx, rect.centery), self.fieldSize / 2, 0)
+					
+		craneIdText = self.basicFont.render(str(crane.id), True, Display.WHITE, (100, 100, 100))
+		craneIdTextRect = craneIdText.get_rect()
+		craneIdTextRect.centerx = craneRect.centerx - self.fieldSize / 4
+		craneIdTextRect.centery = craneRect.centery - self.fieldSize / 4
+		self.windowSurface.blit(craneIdText, craneIdTextRect)
+					
+		if crane.crate == None:
+			heldCrateId = "---"
+		else:
+			heldCrateId = self.crateIdToString(crane.crate.id)
+		craneHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE, (100, 100, 100))
+		craneHeldCrateIdRect = craneHeldCrateId.get_rect()
+		craneHeldCrateIdRect.centerx = craneRect.centerx
+		craneHeldCrateIdRect.centery = craneRect.centery + self.fieldSize / 4
+		self.windowSurface.blit(craneHeldCrateId, craneHeldCrateIdRect)
+		return craneRect
+
+
+	def drawCranesArms(self, cranesList):
+		for i in xrange(len(cranesList)):
+			(crane, craneRect) = (cranesList[i][0], cranesList[i][1])
+			armLen = sqrt(2) * crane.reach * self.fieldSize
+			pygame.draw.line(self.windowSurface, Display.BLACK, (craneRect.centerx, craneRect.centery), (craneRect.centerx + cos(crane.angle) * armLen, craneRect.centery + sin(crane.angle) * armLen), 3)
+
+
+	def drawCratesOnField(self, ids, rect):
+		for i in xrange(len(ids)):
+			pygame.draw.rect(self.windowSurface, Display.BLACK, (rect.centerx - ((self.fontSize / 2) * 3 + 8) / 2, rect.bottom - (self.fontSize + 1) - (self.fieldSize / 4) * i, (self.fontSize / 2) * 3 + 10, self.fontSize + 2), 1)
+			crateId = self.basicFont.render(self.crateIdToString(ids[i]), True, Display.BLACK, Display.WHITE)
+			crateIdRect = crateId.get_rect()
+			crateIdRect.centerx = rect.centerx
+			crateIdRect.centery = rect.bottom - (self.fieldSize / 4) * i - self.fontSize / 2
+			self.windowSurface.blit(crateId, crateIdRect)
+
+
 	def drawStuff(self, map):
 		(upperLeftRow, upperLeftCol) = self.upperLeftFieldCoors
 		cranesList = []
@@ -58,45 +96,23 @@ class Display:
 			for col in xrange(upperLeftCol, min(map.colNum, upperLeftCol + self.colsPerScreen)):
 				rect = pygame.draw.rect(self.windowSurface, Display.BLACK, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize), 1)
 				colDisplay += 1
-				
+
 				if map.fieldType(row, col) == Field.CRANE_TYPE:
 					crane = map.field(row, col).getCrane()
-					craneRect = pygame.draw.circle(self.windowSurface, (100, 100, 100), (rect.centerx, rect.centery), self.fieldSize / 2, 0)
+					craneRect = self.drawCraneBody(crane, rect)
 					cranesList.append((crane, craneRect))
-					
-					craneIdText = self.basicFont.render(str(crane.id), True, Display.WHITE, (100, 100, 100))
-					craneIdTextRect = craneIdText.get_rect()
-					craneIdTextRect.centerx = craneRect.centerx - self.fieldSize / 4
-					craneIdTextRect.centery = craneRect.centery - self.fieldSize / 4
-					self.windowSurface.blit(craneIdText, craneIdTextRect)
-					
-					if crane.crate == None:
-						heldCrateId = "---"
-					else:
-						heldCrateId = self.crateIdToString(crane.crate.id)
-					craneHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE, (100, 100, 100))
-					craneHeldCrateIdRect = craneHeldCrateId.get_rect()
-					craneHeldCrateIdRect.centerx = craneRect.centerx
-					craneHeldCrateIdRect.centery = craneRect.centery + self.fieldSize / 4
-					self.windowSurface.blit(craneHeldCrateId, craneHeldCrateIdRect)
 					continue
 				
 				if map.field(row, col).countCrates() == 0:
 					continue
-				ids = map.field(row, col).getAllCratesIds()
-				for i in xrange(len(ids)):
-					pygame.draw.rect(self.windowSurface, Display.BLACK, (rect.centerx - ((self.fontSize / 2) * 3 + 8) / 2, rect.bottom - (self.fontSize + 1) - (self.fieldSize / 4) * i, (self.fontSize / 2) * 3 + 10, self.fontSize + 2), 1)
-					crateId = self.basicFont.render(self.crateIdToString(ids[i]), True, Display.BLACK, Display.WHITE)
-					crateIdRect = crateId.get_rect()
-					crateIdRect.centerx = rect.centerx
-					crateIdRect.centery = rect.bottom - (self.fieldSize / 4) * i - self.fontSize / 2
-					self.windowSurface.blit(crateId, crateIdRect)
+				self.drawCratesOnField(map.field(row, col).getAllCratesIds(), rect)
+
+			if upperLeftCol + self.colsPerScreen >= map.colNum + 1: # draw the "ship"
+				pygame.draw.rect(self.windowSurface, (205, 127, 50), (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize))
+
 			rowDisplay += 1
 
-		for i in xrange(len(cranesList)):
-			(crane, craneRect) = (cranesList[i][0], cranesList[i][1])
-			armLen = sqrt(2) * crane.reach * self.fieldSize
-			pygame.draw.line(self.windowSurface, Display.BLACK, (craneRect.centerx, craneRect.centery), (craneRect.centerx + cos(crane.angle) * armLen, craneRect.centery + sin(crane.angle) * armLen), 3)
+		self.drawCranesArms(cranesList)
 
 
 	def moveDisplay(self, map, position):
