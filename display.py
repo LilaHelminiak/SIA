@@ -22,7 +22,8 @@ class Display:
 		self.colsPerScreen = int(self.width / self.fieldSize)
 		self.rowsPerScreen = int(self.height / self.fieldSize)
 		self.upperLeftFieldCoors = (0, 0)
-		
+		self.showingInfoForObject = None  # reference to an object (Field / Crane / Ship)		
+
 		pygame.init()
 		self.clock = pygame.time.Clock()
 		
@@ -113,12 +114,37 @@ class Display:
 			rowDisplay += 1
 
 		self.drawCranesArms(cranesList)
+		self.drawInformationWindow(map)
+
+
+	def drawInformationWindow(self, map):
+		if self.showingInfoForObject == None:
+			return
+		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 4, self.height / 4, self.width / 2, self.height / 2))
+		info = "FIELD"
+		if self.showingInfoForObject == map.ship:
+			info = "SHIP"
+		elif self.showingInfoForObject.type == Field.CRANE_TYPE:
+			info = "CRANE"
+		text = self.basicFont.render(info, True, Display.BLACK, Display.WHITE)
+		textRect = text.get_rect()
+		textRect.centerx = infoRect.centerx
+		textRect.centery = infoRect.centery
+		self.windowSurface.blit(text, textRect)
 
 
 	def moveDisplay(self, map, position):
 		if position[0] >= 0 and position[0] < map.rowNum:
 			if position[1] >= 0 and position[1] < map.colNum + 1:
 				self.upperLeftFieldCoors = position
+
+
+	def startShowingInformationWindow(self, map, position):
+		(row, col) = position
+		if col == map.colNum and row < map.rowNum:
+			self.showingInfoForObject = map.ship
+		elif map.inRange(position):
+			self.showingInfoForObject = map.field(row, col)
 
 
 	def drawMap(self, map):
@@ -138,6 +164,14 @@ class Display:
 					self.moveDisplay(map, (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[1] - 1))
 				if event.key == K_RIGHT:
 					self.moveDisplay(map, (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[1] + 1))
+			if event.type == MOUSEBUTTONDOWN:
+				clickRow = self.upperLeftFieldCoors[0] + int(floor(event.pos[1] / self.fieldSize))
+				clickCol = self.upperLeftFieldCoors[1] + int(floor(event.pos[0] / self.fieldSize))
+				if event.button == 1:
+					if self.showingInfoForObject == None:
+						self.startShowingInformationWindow(map, (clickRow, clickCol))
+					else:
+						self.showingInfoForObject = None
 					
 		self.windowSurface.fill(Display.WHITE)
 			

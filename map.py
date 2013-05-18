@@ -3,6 +3,7 @@ from math import *
 from field import *
 from display import *
 from crane import *
+from ship import *
 
 class Map:
 
@@ -30,6 +31,7 @@ class Map:
 		self.map[2][3] = Field(Field.CRANE_TYPE, [c2])
 		self.map[3][5] = Field(Field.CRANE_TYPE, [c3])
 		self.map[5][3] = Field(Field.CRANE_TYPE, [c4])
+		self.ship = Ship([c1, c2, c3, c4], [7, 772, 8, 5, 1, 2])
 	
 	
 	def stopThreads(self):
