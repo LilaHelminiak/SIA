@@ -100,8 +100,8 @@ class Display:
 
 
 	def moveDisplay(self, map, position):
-		if position[0] >= 0 and position[0] + self.rowsPerScreen <= map.rowNum:
-			if position[1] >= 0 and position[1] + self.rowsPerScreen <= map.colNum + 1:
+		if position[0] >= 0 and position[0] < map.rowNum:
+			if position[1] >= 0 and position[1] < map.colNum + 1:
 				self.upperLeftFieldCoors = position
 
 
