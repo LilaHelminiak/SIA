@@ -77,6 +77,9 @@ class Display:
 			armLen = sqrt(2) * crane.reach * self.fieldSize
 			pygame.draw.line(self.windowSurface, Display.BLACK, (craneRect.centerx, craneRect.centery), (craneRect.centerx + cos(crane.angle) * armLen, craneRect.centery + sin(crane.angle) * armLen), 3)
 
+			hookDist = crane.hookDistance * self.fieldSize
+			pygame.draw.circle(self.windowSurface, Display.BLACK, (int(craneRect.centerx + cos(crane.angle) * hookDist), int(craneRect.centery + sin(crane.angle) * hookDist)), int(max(5, (crane.hookHeight / crane.height) * 10)), 0)
+
 
 	def drawCratesOnField(self, ids, rect):
 		for i in xrange(len(ids)):
