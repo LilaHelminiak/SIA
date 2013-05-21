@@ -39,7 +39,17 @@ class Map:
 			for j in xrange(self.colNum):
 				if self.fieldType(i, j) == Field.CRANE_TYPE:
 					self.field(i, j).getCrane().stop()
-	
+
+
+	def __call__(self, pos):
+		if(self.inMapBounds(pos) == False):
+			return None
+		return self.map[pos[0]][pos[1]]
+
+
+	def __getitem__(self, pos):
+		return self(pos)
+
 	
 	def fieldType(self, row, col):
 		return self.map[row][col].type
