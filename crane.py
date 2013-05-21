@@ -40,8 +40,8 @@ class Crane:
 		self.thread.start()
 
 	def moveArm(self, alfa, dist):
-		alfaStep = 0.03 * (-1 if alfa < 0 else 1)
-		distStep = 0.03 * (-1 if dist < 0 else 1)
+		alfaStep = 0.02 * (-1 if alfa < 0 else 1)
+		distStep = 0.02 * (-1 if dist < 0 else 1)
 
 		while abs(alfa) > abs(alfaStep):
 			self.angle += alfaStep
@@ -64,7 +64,7 @@ class Crane:
 			self.hookHeight -= distStep
 			dist -= distStep
 			sleep(0.02)
-		self.hookHeight -= dist
+		self.hookHeight = round(self.hookHeight - dist)
 		sleep(0.02)
 
 	def hookUp(self, dist):
@@ -73,21 +73,21 @@ class Crane:
 			self.hookHeight += distStep
 			dist -= distStep
 			sleep(0.02)
-		self.hookHeight += dist
+		self.hookHeight = round(self.hookHeight + dist)
 		sleep(0.02)
 
 	def grab(self):
 		sleep(0.02)
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
-		print self.id, "grab from", (y,x)
+		print self.id, "grab from", (y,x), ", hook height:", self.hookHeight
 		self.crate = self.map.map[y][x].removeCrateFromTop()
 	
 	def drop(self):
 		sleep(0.02)
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
-		print self.id, "drop on", (y,x)
+		print self.id, "drop on", (y,x), ", hook height:", self.hookHeight
 		self.map.map[y][x].putCrateOnTop(self.crate)
 		self.crate = None
 
@@ -113,9 +113,9 @@ class Crane:
 			(MOVE_ARM, [rotate1, shift1]), 
 			(HOOK_DOWN, [self.height - stack1Size]),
 			(GRAB, []),
-			(HOOK_UP, [self.height - self.hookHeight]),
+			(HOOK_UP, [self.height - stack1Size]),
 			(MOVE_ARM, [rotate2, shift2]), 
-			(HOOK_DOWN, [self.height - stack2Size]),
+			(HOOK_DOWN, [self.height - stack2Size - 1]),
 			(DROP, [])
 		]
 
@@ -126,7 +126,7 @@ class Crane:
 			freeX = randrange(-self.reach, self.reach+1) + self.position[1]
 			free = (freeY, freeX)
 			f = self.map.map[freeY][freeX]
-			if free != pos and self.map.inRange(free) and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:
+			if free != pos and self.map.inMapBounds(free) and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, free)
 
@@ -139,7 +139,7 @@ class Crane:
 			commonX = topLeft[1] + randrange(0, w)
 			common = (commonY,commonX)
 			f = self.map.map[commonY][commonX]
-			if common != self.position and common != crane.position and self.map.inRange(common) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+			if common != self.position and common != crane.position and self.map.inMapBounds(common) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, common)
 	
@@ -151,13 +151,16 @@ class Crane:
 			shipX = self.map.colNum-1
 			shipPos = (shipY, shipX)
 			f = self.map.map[shipY][shipX]
-			if shipPos != self.position and self.map.inRange(shipPos) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+			if shipPos != self.position and self.map.inMapBounds(shipPos) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, shipPos)
 	
 	def keepBusy(self):
 		rotate = ((pi/2 - self.angle + pi) % (2*pi)) - pi
-		return [(MOVE_ARM, [rotate, self.hookDistance])]
+		return [
+			(HOOK_UP, [self.height - self.hookHeight]),
+			(MOVE_ARM, [rotate, 0])
+		]
 
 	def informOthers(self, recipients):
 		for c in recipients:

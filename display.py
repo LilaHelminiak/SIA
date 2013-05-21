@@ -146,7 +146,7 @@ class Display:
 		(row, col) = position
 		if col == map.colNum and row < map.rowNum:
 			self.showingInfoForObject = map.ship
-		elif map.inRange(position):
+		elif map.inMapBounds(position):
 			self.showingInfoForObject = map.field(row, col)
 
 

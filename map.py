@@ -49,7 +49,7 @@ class Map:
 		return self.map[row][col]
 
 		
-	def inRange(self, pos):
+	def inMapBounds(self, pos):
 		(y, x) = pos
 		return y >= 0 and x >= 0 and y < self.rowNum and x < self.colNum
 
