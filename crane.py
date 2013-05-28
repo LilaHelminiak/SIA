@@ -153,6 +153,8 @@ class Crane:
 			f = self.map.map[shipY][shipX]
 			if shipPos != self.position and self.map.inMapBounds(shipPos) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
 				break
+			#msg = Message(self, Message.PACKAGE_DELIVERED, [!!!Add here Id of the package which is delivered!!!])
+			#self.map.ship.messages.put(msg)
 		return self.moveContainer(pos, shipPos)
 	
 	def keepBusy(self):
