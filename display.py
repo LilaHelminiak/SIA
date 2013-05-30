@@ -12,6 +12,7 @@ class Display:
 	RED = (255, 0, 0)
 	GREEN = (0, 255, 0)
 	BLUE = (0, 0, 255)
+	BROWN = (205, 127, 50)
 
 	
 	def __init__(self, width, height, fieldSize, fontSize):
@@ -98,6 +99,10 @@ class Display:
 		for row in xrange(upperLeftRow, min(map.rowNum, upperLeftRow + self.rowsPerScreen)):
 			colDisplay = 0
 			for col in xrange(upperLeftCol, min(map.colNum, upperLeftCol + self.colsPerScreen)):
+
+				if map.fieldType(row, col) == Field.SHIP_TYPE:
+					pygame.draw.rect(self.windowSurface, Display.BROWN, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize)) # draw the ship's front column
+
 				rect = pygame.draw.rect(self.windowSurface, Display.BLACK, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize), 1)
 				colDisplay += 1
 
@@ -111,8 +116,8 @@ class Display:
 					continue
 				self.drawCratesOnField(map.field(row, col).getAllCratesIds(), rect)
 
-			if upperLeftCol + self.colsPerScreen >= map.colNum + 1: # draw the "ship"
-				pygame.draw.rect(self.windowSurface, (205, 127, 50), (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize))
+			if upperLeftCol + self.colsPerScreen >= map.colNum + 1 and map.fieldType(row, map.colNum - 1) == Field.SHIP_TYPE: # draw the ship's back column
+				pygame.draw.rect(self.windowSurface, Display.BROWN, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize))
 
 			rowDisplay += 1
 
@@ -159,6 +164,9 @@ class Display:
 				pygame.quit()
 				sys.exit()
 			if event.type == KEYDOWN:
+				if event.key == K_SPACE:
+					map.pause ^= True
+					print "Pause = " + str(map.paused)
 				if event.key == K_UP:
 					self.moveDisplay(map, (self.upperLeftFieldCoors[0] - 1, self.upperLeftFieldCoors[1]))
 				if event.key == K_DOWN:

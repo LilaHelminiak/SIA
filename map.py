@@ -11,6 +11,7 @@ class Map:
 		self.rowNum = rowNum
 		self.colNum = colNum
 		self.display = display
+		self.pause = False
 		self.map = [[Field(Field.STORAGE_TYPE, []) for col in xrange(colNum)] for row in xrange(rowNum)]
 		
 		self.map[0][0] = Field(Field.STORAGE_TYPE, [Crate(1, 3), Crate(5, 2), Crate(22, 3)])
@@ -31,7 +32,9 @@ class Map:
 		self.map[2][3] = Field(Field.CRANE_TYPE, [c2])
 		self.map[3][5] = Field(Field.CRANE_TYPE, [c3])
 		self.map[5][3] = Field(Field.CRANE_TYPE, [c4])
-		self.ship = Ship([c1, c2, c3, c4], [7, 772, 8, 5, 1, 2])
+		self.ship = Ship([c1, c2, c3, c4], [7, 772, 8, 5, 1, 2], 0, self.rowNum - 1)
+		for i in xrange(self.ship.topRow, self.ship.bottomRow + 1):
+			self.map[i][self.colNum - 1] = Field(Field.SHIP_TYPE, [])
 	
 	
 	def stopThreads(self):

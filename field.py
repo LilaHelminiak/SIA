@@ -3,13 +3,17 @@ from crate import *
 
 class Field:
 
-	(STORAGE_TYPE, ROAD_TYPE, CRANE_TYPE) = range(0, 3)
+	(STORAGE_TYPE, ROAD_TYPE, CRANE_TYPE, SHIP_TYPE) = range(0, 4)
 	STACK_MAX_SIZE = 4
 	
 	
 	def __init__(self, type, objectsList = []):
 		self.type = type
 		self.objectsList = objectsList
+
+
+	def isStackable(self):
+		return self.type in (STORAGE_TYPE, ROAD_TYPE, SHIP_TYPE)
 		
 		
 	def	countCrates(self):

@@ -9,7 +9,9 @@ import thread
 
 class Ship:
 
-        def __init__(self, cranes, crates):
+        def __init__(self, cranes, crates, topRow, bottomRow):
+                self.topRow = topRow  # top row of the ship (ship's bow)
+                self.bottomRow = bottomRow  # bottom row of the ship (ship's stern)
                 self.cranes = cranes
                 self.crates = crates
                 self.running = True
