@@ -81,14 +81,14 @@ class Crane:
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
 		print self.id, "grab from", (y,x), ", hook height:", self.hookHeight
-		self.crate = self.map.map[y][x].removeCrateFromTop()
+		self.crate = self.map[y,x].removeCrateFromTop()
 	
 	def drop(self):
 		sleep(0.02)
 		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
 		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
 		print self.id, "drop on", (y,x), ", hook height:", self.hookHeight
-		self.map.map[y][x].putCrateOnTop(self.crate)
+		self.map[y,x].putCrateOnTop(self.crate)
 		self.crate = None
 
 	def doNothing(self):
@@ -104,9 +104,8 @@ class Crane:
 
 		(rotate1, shift1) = calcAngleAndShift(pos1, self.angle, self.hookDistance)
 		(rotate2, shift2) = calcAngleAndShift(pos2, self.angle+rotate1, self.hookDistance+shift1)
-		(y1, x1) = pos1; (y2, x2) = pos2
-		stack1Size = self.map.map[y1][x1].countCrates()
-		stack2Size = self.map.map[y2][x2].countCrates()
+		stack1Size = self.map[pos1].countCrates()
+		stack2Size = self.map[pos2].countCrates()
 
 		return [
 			(HOOK_UP, [self.height - self.hookHeight]),
@@ -125,8 +124,8 @@ class Crane:
 			freeY = randrange(-self.reach, self.reach+1) + self.position[0]
 			freeX = randrange(-self.reach, self.reach+1) + self.position[1]
 			free = (freeY, freeX)
-			f = self.map.map[freeY][freeX]
-			if free != pos and self.map.inMapBounds(free) and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:
+			f = self.map[free]
+			if free != pos and f and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, free)
 
@@ -138,8 +137,8 @@ class Crane:
 			commonY = topLeft[0] + randrange(0, h)
 			commonX = topLeft[1] + randrange(0, w)
 			common = (commonY,commonX)
-			f = self.map.map[commonY][commonX]
-			if common != self.position and common != crane.position and self.map.inMapBounds(common) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+			f = self.map[common]
+			if common != self.position and common != crane.position and f and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
 				break
 		return self.moveContainer(pos, common)
 	
@@ -150,8 +149,8 @@ class Crane:
 			shipY = randrange(-self.reach, self.reach+1) + self.position[0]
 			shipX = self.map.colNum-1
 			shipPos = (shipY, shipX)
-			f = self.map.map[shipY][shipX]
-			if shipPos != self.position and self.map.inMapBounds(shipPos) and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+			f = self.map[shipPos]
+			if shipPos != self.position and f and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
 				break
 			#msg = Message(self, Message.PACKAGE_DELIVERED, [!!!Add here Id of the package which is delivered!!!])
 			#self.map.ship.messages.put(msg)
@@ -192,10 +191,11 @@ class Crane:
 		for y in xrange(self.position[0]-self.reach, self.position[0]+self.reach+1):
 			for x in xrange(self.position[1]-self.reach, self.position[1]+self.reach+1):
 				if( x < self.map.colNum and y < self.map.rowNum):
-					if(self.map.fieldType(y, x) == Field.STORAGE_TYPE):
-						field = self.map.field(y, x).getAllCratesIds()
+					pos = (y,x)
+					if(self.map[pos].type == Field.STORAGE_TYPE):
+						field = self.map[pos].getAllCratesIds()
 						for i in xrange(len(field)):
-							self.onMyArea[field[i]] = (y, x)
+							self.onMyArea[field[i]] = pos
 			if self.position[1] + self.reach >= self.map.colNum-1:
 				if self.directToShip == 0:
 					self.directToShip = 1 #maybe should be in init in order to not check it whole time
