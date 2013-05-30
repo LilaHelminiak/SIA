@@ -13,7 +13,7 @@ class Field:
 
 
 	def isStackable(self):
-		return self.type in (STORAGE_TYPE, ROAD_TYPE, SHIP_TYPE)
+		return self.type in (Field.STORAGE_TYPE, Field.ROAD_TYPE, Field.SHIP_TYPE)
 		
 		
 	def	countCrates(self):

@@ -71,8 +71,8 @@ class Crane:
 
 	# these functions decompose crane actions to more atomic instructions
 	def moveArmDecompose(self, alfa, dist):
-		aStep, aDir = 0.02, 1 if alfa > 0 else -1
-		dStep, dDir = 0.02, 1 if dist > 0 else -1
+		aStep, aDir = 0.04, 1 if alfa > 0 else -1
+		dStep, dDir = 0.04, 1 if dist > 0 else -1
 		inst = []
 		aL = [aStep] * int(abs(alfa)/aStep) + [abs(alfa) % aStep]
 		dL = [dStep] * int(abs(dist)/dStep) + [abs(dist) % dStep]
@@ -159,7 +159,7 @@ class Crane:
 			shipX = self.map.colNum-1
 			shipPos = (shipY, shipX)
 			f = self.map[shipPos]
-			if shipPos != self.position and f and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+			if shipPos != self.position and f and f.type == Field.SHIP_TYPE and f.isStackable():
 				break
 			#msg = Message(self, Message.PACKAGE_DELIVERED, [!!!Add here Id of the package which is delivered!!!])
 			#self.map.ship.messages.put(msg)
@@ -223,13 +223,15 @@ class Crane:
 			for x in xrange(self.position[1]-self.reach, self.position[1]+self.reach+1):
 				if( x < self.map.colNum and y < self.map.rowNum):
 					pos = (y,x)
-					if(self.map[pos].type == Field.STORAGE_TYPE):
-						field = self.map[pos].getAllCratesIds()
-						for i in xrange(len(field)):
-							self.onMyArea[field[i]] = pos
-			if self.position[1] + self.reach >= self.map.colNum-1:
-				if self.directToShip == 0:
-					self.directToShip = 1 #maybe should be in init in order to not check it whole time
+					field = self.map[pos]
+
+					if field.type == Field.SHIP_TYPE:
+						if self.directToShip == 0:
+							self.directToShip = 1
+
+					elif field.type == Field.STORAGE_TYPE:
+						for cid in field.getAllCratesIds():
+							self.onMyArea[cid] = pos
 
 	def readMessage(self, msg):
 		if msg.type == Message.SEARCH_PACKAGE:
@@ -315,9 +317,12 @@ class Crane:
 		self.doAtomicInst(self.instructions.popleft())
 	
 	def mainLoop(self):
-		SLEEP_SEC = 0.01
+		SLEEP_SEC = 0.02
 		
 		while self.running:
+			while self.running and self.map.pause:
+				sleep(0.1)
+			
 			t = time()
 
 			self.examineSurroundings()

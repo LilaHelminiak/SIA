@@ -166,7 +166,7 @@ class Display:
 			if event.type == KEYDOWN:
 				if event.key == K_SPACE:
 					map.pause ^= True
-					print "Pause = " + str(map.paused)
+					print "Pause = " + str(map.pause)
 				if event.key == K_UP:
 					self.moveDisplay(map, (self.upperLeftFieldCoors[0] - 1, self.upperLeftFieldCoors[1]))
 				if event.key == K_DOWN:
