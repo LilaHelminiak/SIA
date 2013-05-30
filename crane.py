@@ -7,7 +7,7 @@ from message import Message
 from field import Field
 from random import randrange, choice
 
-(MOVE_ARM, HOOK_UP, HOOK_DOWN, GRAB, DROP, NOTHING) = range(10, 16)
+(MOVE_ARM, HOOK_UP, HOOK_DOWN, GRAB, DROP, SEND_MSG) = range(10, 16)
 (TAKE_OFF, PASS_ON, LOAD_SHIP, KEEP_BUSY) = range(20,24)
 
 class Crane:
@@ -39,6 +39,12 @@ class Crane:
 		self.running = True
 		self.thread.start()
 
+	def getHookPosition(self):
+		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
+		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
+		return (y,x)
+
+	# atomic functions that crane can do at once
 	def moveArmInst(self, alfa, dist):
 		self.angle += alfa
 		self.hookDistance += dist
@@ -50,18 +56,20 @@ class Crane:
 		self.hookHeight += dist
 	
 	def grabInst(self):
-		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
-		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
-		self.crate = self.map[y,x].removeCrateFromTop()
-		print self.id, "grab from", (y,x), ", hook height:", self.hookHeight, "id: ", self.crate.id
+		pos = self.getHookPosition()
+		self.crate = self.map[pos].removeCrateFromTop()
+		print self.id, "grab from", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
 	
 	def dropInst(self):
-		y = int(round(sin(self.angle)*self.hookDistance)) + self.position[0]
-		x = int(round(cos(self.angle)*self.hookDistance)) + self.position[1]
-		print self.id, "drop on", (y,x), ", hook height:", self.hookHeight
-		self.map[y,x].putCrateOnTop(self.crate)
+		pos = self.getHookPosition()
+		self.map[pos].putCrateOnTop(self.crate)
+		print self.id, "drop on", pos, ", hook height:", self.hookHeight
 		self.crate = None
 
+	def sendMessageInst(self, receiver, message):
+		receiver.addMessage(msg)
+
+	# these functions decompose crane actions to more atomic instructions
 	def moveArmDecompose(self, alfa, dist):
 		aStep, aDir = 0.02, 1 if alfa > 0 else -1
 		dStep, dDir = 0.02, 1 if dist > 0 else -1
@@ -70,12 +78,11 @@ class Crane:
 		dL = [dStep] * int(abs(dist)/dStep) + [abs(dist) % dStep]
 		if len(aL) > len(dL):
 			dL.extend([0] * (len(aL) - len(dL)))
-		elif len(aL) > len(dL):
+		elif len(aL) < len(dL):
 			aL.extend([0] * (len(dL) - len(aL)))
 		for (a, d) in zip(aL, dL):
 			inst.append((MOVE_ARM, [a*aDir, d*dDir]))
 		return inst
-
 	
 	def hookDownDecompose(self, dist):
 		dStep = 0.7
@@ -91,7 +98,11 @@ class Crane:
 	def dropDecompose(self):
 		return [(DROP,[])]
 			
-
+	def sendMessageDecompose(self, receiver, message):
+		return [(SEND_MSG,[receiver, message])]
+			
+	# this function decompose "move crate from pos1 to pos2" action
+	# to atomic instructions
 	def moveContainerDecompose(self, pos1, pos2):
 		def calcAngleAndShift(pos, armAngle, hookDist):
 			(dy, dx) = (pos[0] - self.position[0], pos[1] - self.position[1])
@@ -115,6 +126,7 @@ class Crane:
 			self.dropDecompose()
 		)
 
+	# functions of tasks that crane has to do
 	def takeOff(self, pos):
 		free = None
 		while True:
@@ -151,7 +163,10 @@ class Crane:
 				break
 			#msg = Message(self, Message.PACKAGE_DELIVERED, [!!!Add here Id of the package which is delivered!!!])
 			#self.map.ship.messages.put(msg)
-		return self.moveContainerDecompose(pos, shipPos)
+		return (
+			self.moveContainerDecompose(pos, shipPos)
+		)
+
 	
 	def keepBusy(self):
 		rotate = ((pi/2 - self.angle + pi) % (2*pi)) - pi
@@ -159,6 +174,25 @@ class Crane:
 			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate, 0)
 		)
+	
+	def doAtomicInst(self, inst):
+		cmd = {
+			MOVE_ARM:  self.moveArmInst,
+			HOOK_UP:   self.hookUpInst,
+			HOOK_DOWN: self.hookDownInst,
+			GRAB:	   self.grabInst,
+			DROP:	   self.dropInst
+		}.get(inst[0])
+		cmd(*inst[1])
+	
+	def decomposeTask(self, task):
+		dec = {
+			TAKE_OFF:  self.takeOff,
+			PASS_ON:   self.passOn,
+			LOAD_SHIP: self.loadShip,
+			KEEP_BUSY: self.keepBusy
+		}.get(task[0])
+		return dec(*task[1])
 
 	def informOthers(self, recipients):
 		for c in recipients:
@@ -220,26 +254,6 @@ class Crane:
 			self.readMessage(self.messages.get())
 			left -= 1
 
-	def doInst(self, inst):
-		cmd = {
-			MOVE_ARM:  self.moveArmInst,
-			HOOK_UP:   self.hookUpInst,
-			HOOK_DOWN: self.hookDownInst,
-			GRAB:	   self.grabInst,
-			DROP:	   self.dropInst
-		}.get(inst[0])
-		cmd(*inst[1])
-		sleep(0.01)
-	
-	def decomposeTask(self, task):
-		dec = {
-			TAKE_OFF:  self.takeOff,
-			PASS_ON:   self.passOn,
-			LOAD_SHIP: self.loadShip,
-			KEEP_BUSY: self.keepBusy
-		}.get(task[0])
-		return dec(*task[1])
-
 	def isInArea(self, pos):
 		(x, y) = self.position
 		return max(abs(pos[0]-x), abs(pos[1]-y)) <= self.reach
@@ -298,13 +312,19 @@ class Crane:
 			inst = self.decomposeTask(task)
 			self.instructions.extend(inst)
 
-		self.doInst(self.instructions.popleft())
+		self.doAtomicInst(self.instructions.popleft())
 	
 	def mainLoop(self):
+		SLEEP_SEC = 0.01
+		
 		while self.running:
+			t = time()
+
 			self.examineSurroundings()
 			self.readMessages()
 			self.doWork()
+
+			sleep(max(SLEEP_SEC - (time() - t), 0))
 
 	def createThread(self):
 		return Thread(target=self.mainLoop, args=[])
