@@ -67,7 +67,7 @@ class Crane:
 		self.crate = None
 
 	def sendMessageInst(self, receiver, message):
-		receiver.addMessage(msg)
+		receiver.addMessage(message)
 
 	# these functions decompose crane actions to more atomic instructions
 	def moveArmDecompose(self, alfa, dist):
@@ -163,8 +163,10 @@ class Crane:
 				break
 			#msg = Message(self, Message.PACKAGE_DELIVERED, [!!!Add here Id of the package which is delivered!!!])
 			#self.map.ship.messages.put(msg)
+		msg = Message(self, Message.PACKAGE_DELIVERED, self.map[pos].getTopCrateId())
 		return (
-			self.moveContainerDecompose(pos, shipPos)
+			self.moveContainerDecompose(pos, shipPos) +
+			self.sendMessageDecompose(self.map.ship, msg)
 		)
 
 	
@@ -181,7 +183,8 @@ class Crane:
 			HOOK_UP:   self.hookUpInst,
 			HOOK_DOWN: self.hookDownInst,
 			GRAB:	   self.grabInst,
-			DROP:	   self.dropInst
+			DROP:	   self.dropInst,
+			SEND_MSG:  self.sendMessageInst
 		}.get(inst[0])
 		cmd(*inst[1])
 	

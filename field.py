@@ -49,6 +49,12 @@ class Field:
 		return -1
 		
 		
+	def getTopCrateId(self):
+		if self.type == Field.CRANE_TYPE or len(self.objectsList) < 1:
+			raise Exception("Invalid Request")
+		return self.objectsList[-1].id
+			
+
 	def removeCrateFromTop(self):
 		if self.type == Field.CRANE_TYPE or len(self.objectsList) < 1:
 			raise Exception("Invalid Request")
