@@ -26,6 +26,7 @@ class Crane:
                 self.crate = None
 
                 self.messages = Queue()
+                self.negotiate = Queue()
                 self.tasks = deque()
                 self.instructions = deque()
 
@@ -34,6 +35,7 @@ class Crane:
                 self.wanted = set() #all packages wanted by ship
                 self.onMyArea = {} #packages on my field after examineSurroundings
                 self.inWay  = {}
+                self.negotiations = False #checks if negotiations are on 
 
                 self.thread = self.createThread()
                 self.running = True
@@ -63,7 +65,7 @@ class Crane:
         def dropInst(self):
                 pos = self.getHookPosition()
                 self.map[pos].putCrateOnTop(self.crate)
-                print self.id, "drop on", pos, ", hook height:", self.hookHeight
+                print self.id, "drop on", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
                 self.crate = None
 
         def sendMessageInst(self, receiver, message):
@@ -134,39 +136,53 @@ class Crane:
                         freeX = randrange(-self.reach, self.reach+1) + self.position[1]
                         free = (freeY, freeX)
                         f = self.map[free]
-                        if free != pos and f and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:
+                        commonFields = [field for cranes in self.neighbours for field in self.map.commonStorageFields(self, cranes)]                                
+                        if free != pos and f and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:# and (free not in commonFields):
                                 break
+                print '%s drops garbage' % (self.id)
                 return self.moveContainerDecompose(pos, free)
 
         def passOn(self, pos, crane):
-                print "testLine common fields for %s and %s" % (self.id, crane.id)
-                aList = self.map.commonStorageFields(self,crane)
-                for x in xrange(len(aList)):
-                        print str(aList[x]) + '\n'
+                commonFields = self.map.commonStorageFields(self,crane)
                 rect = self.map.commonArea(self, crane)
                 (topLeft, h, w) = rect
-                common = None
-                while True:
-                        commonY = topLeft[0] + randrange(0, h)
-                        commonX = topLeft[1] + randrange(0, w)
-                        common = (commonY,commonX)
-                        f = self.map[common]
-                        if common != self.position and common != crane.position and f and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
+                common = (commonFields[randrange(0, len(commonFields))])
+                i = 0
+                while self.map.distance(pos, common) > self.map.distance(pos, commonFields[i]):
+                        msg = Message(self, Message.NEGOTIATE_FIELD, [common,  commonFields[i]])                       
+                        self.sendMessageInst(crane, msg)
+                        while(self.negotiate.empty()):
+                            sleep(0.2)
+                            self.readMessages()
+                        ans = self.negotiate.get()
+                        if ans.type == Message.NEGOTIATE_ANSWER:
+                            if ans.data[0] == 'yes':
+                                rc=common
+                                common = commonFields[i]
+                                print 'negotiations (%s and %s): successfull. Common field is %s instead for %s' % (self.id, crane.id, common, rc)
                                 break
+                        if i+1 < len(commonFields):
+                            i = i+1
+                        else:
+                            break
+                        
                 return self.moveContainerDecompose(pos, common)
         
         def loadShip(self, pos):
                 randY = randrange(-self.reach, self.reach)
                 shipPos = None
                 while True:
-                        shipY = randrange(-self.reach, self.reach+1) + self.position[0]
+                        shipY = pos[0]
+                        if pos[0] == self.position[0]:
+                                if pos[0] + 1 < self.map.rowNum:
+                                        shipY = pos[0]+1
+                                else:
+                                        shipY = pos[0]-1
                         shipX = self.map.colNum-1
                         shipPos = (shipY, shipX)
                         f = self.map[shipPos]
                         if shipPos != self.position and f and f.type == Field.SHIP_TYPE and f.isStackable():
                                 break
-                        #msg = Message(self, Message.PACKAGE_DELIVERED, [!!!Add here Id of the package which is delivered!!!])
-                        #self.map.ship.messages.put(msg)
                 msg = Message(self, Message.PACKAGE_DELIVERED, self.map[pos].getTopCrateId())
                 return (
                         self.moveContainerDecompose(pos, shipPos) +
@@ -218,6 +234,10 @@ class Crane:
 
         def addMessage(self, msg):
                 self.messages.put(msg)
+                
+        def addNegotiate(self, msg):
+                print "%s sentds to %s %s)" % (msg.sender.id, self.id, msg.data)
+                self.negotiate.put(msg)
 
         def addNeighbours(self, l):
                 self.neighbours.extend(l)
@@ -257,6 +277,25 @@ class Crane:
                         self.toShip.append(msg.sender)
                         print self.id, "To ship through", msg.sender.id
                         self.informOthers(self.neighbours)
+                
+                elif msg.type == Message.NEGOTIATE_FIELD:
+                        old_field = msg.data[0]
+                        new_field = msg.data[1]
+                        print "%s negotiates, old %s vs new %s" % (self.id, old_field, new_field)
+                        if self.directToShip == 0:
+                                goal_field = self.map.commonStorageFields(self, self.neighbours[0])[0]
+                                if(self.map.distance(old_field, goal_field) >= self.map.distance(new_field, goal_field)):
+                                        response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
+                                else:
+                                        response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
+                        else:
+                                print "#####old field dist: %s, new dist: %s" % (self.map.distance(old_field, (self.map.colNum-1, old_field[1])), self.map.distance(new_field, (self.map.colNum-1, new_field[1])))
+                                if(self.map.distance(old_field, (self.map.colNum-1, old_field[1]))) >= self.map.distance(new_field, (self.map.colNum-1, new_field[1])):
+                                        response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
+                                else:
+                                        response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
+                        msg.sender.addNegotiate(response)
+                        
 
         def readMessages(self, left=5):
                 while (left > 0 and not self.messages.empty()):

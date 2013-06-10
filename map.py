@@ -65,7 +65,12 @@ class Map:
         def inMapBounds(self, pos):
                 (y, x) = pos
                 return y >= 0 and x >= 0 and y < self.rowNum and x < self.colNum
-
+                
+        #Returns distance between (y1,x1) and (y2,x2) of the given fields
+        def distance(self, coordinates1, coordinates2):
+                y = fabs(coordinates1[0] - coordinates2[0])
+                x = fabs(coordinates1[1] - coordinates2[1])           
+                return sqrt(x*x + y*y)
                 
         # Returns ((leftUpperCornerRow, leftUpperCornerCol), height, width) or None
         def commonArea(self, crane1, crane2):
@@ -77,7 +82,7 @@ class Map:
                         return None
                 return ((up, left), down - up + 1, right - left + 1)
                 
-        # Returns list of (y,x) coordinates of storage fields
+        # Returns list of (y,x) coordinates of storage fields sorted by distance form crane1
         def commonStorageFields(self, crane1, crane2):
                 commonFields = []
                 rect = self.commonArea(crane1, crane2)
@@ -89,9 +94,13 @@ class Map:
                                 common = (commonY,commonX)
                                 f = self[common]
                                 if common != crane1.position and common != crane2.position and f and f.type == Field.STORAGE_TYPE and f.countCrates() < Field.STACK_MAX_SIZE:
-                                        commonFields.append((commonY,commonX))
-                
-                return commonFields
+                                    self.distance(crane1.position, common)
+                                    commonFields.append(((commonY,commonX), self.distance(crane1.position, common)))
+                commonFields = sorted(commonFields, key=lambda commonFields: commonFields[1])
+                commonF = []
+                for x in xrange(len(commonFields)):
+                    commonF.append(commonFields[x][0])
+                return commonF
 
         
         def drawMap(self):
