@@ -8,7 +8,7 @@ from field import Field
 from random import randrange, choice, gauss
 
 (MOVE_ARM, HOOK_UP, HOOK_DOWN, GRAB, DROP, SEND_MSG, START_MEASURE) = range(10, 17)
-(TAKE_OFF, PASS_ON, LOAD_SHIP, KEEP_BUSY, INFORM_SHIP, MEASURE_TIME) = range(20,26)
+(TAKE_OFF, PUT_SMWHR, PASS_ON, LOAD_SHIP, KEEP_BUSY, INFORM_SHIP, MEASURE_TIME) = range(20,27)
 
 class Crane:
 	def __init__(self, id, position, rangeSight, reach, height, map):
@@ -59,11 +59,13 @@ class Crane:
 		self.hookHeight += dist
 	
 	def grabInst(self):
+		self.hookHeight = abs(round(self.hookHeight))
 		pos = self.getHookPosition()
 		self.crate = self.map[pos].removeCrateFromTop()
 		print self.id, "grab from", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
 	
 	def dropInst(self):
+		self.hookHeight = abs(round(self.hookHeight))
 		pos = self.getHookPosition()
 		self.map[pos].putCrateOnTop(self.crate)
 		print self.id, "drop on", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
@@ -124,31 +126,40 @@ class Crane:
 			
 	# this function decompose "move crate from pos1 to pos2" action
 	# to atomic instructions
-	def moveContainerDecompose(self, pos1, pos2):
-		def calcAngleAndShift(pos, armAngle, hookDist):
-			(dy, dx) = (pos[0] - self.position[0], pos[1] - self.position[1])
-			rotate = ((atan2(dy,dx) - armAngle + pi) % (2*pi)) - pi
-			hookShift = sqrt(dy*dy + dx*dx) - hookDist
-			return (rotate, hookShift)
+	def calcAngleAndShift(self, pos, armAngle, hookDist):
+		(dy, dx) = (pos[0] - self.position[0], pos[1] - self.position[1])
+		rotate = ((atan2(dy,dx) - armAngle + pi) % (2*pi)) - pi
+		hookShift = sqrt(dy*dy + dx*dx) - hookDist
+		return (rotate, hookShift)
 
-		(rotate1, shift1) = calcAngleAndShift(pos1, self.angle, self.hookDistance)
-		(rotate2, shift2) = calcAngleAndShift(pos2, self.angle+rotate1, self.hookDistance+shift1)
+	def pickUpDecompose(self, pos1):
+		(rotate1, shift1) = self.calcAngleAndShift(pos1, self.angle, self.hookDistance)
 		stack1Size = self.map[pos1].countCrates()
-		stack2Size = self.map[pos2].countCrates()
 
 		return (
 			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate1, shift1) +
 			self.hookDownDecompose(self.height - stack1Size) +
-			self.grabDecompose() + 
-			self.hookUpDecompose(self.height - stack1Size) +
+			self.grabDecompose()
+		)
+
+	def putDownDecompose(self, pos2):
+		(rotate2, shift2) = self.calcAngleAndShift(pos2, self.angle, self.hookDistance)
+		stack2Size = self.map[pos2].countCrates()
+
+		return (
+			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate2, shift2) +
-			self.hookDownDecompose(self.height - stack2Size - 1) +
+			self.hookDownDecompose(self.height - stack2Size) +
 			self.dropDecompose()
 		)
 
 	# functions of tasks that crane has to do
 	def takeOff(self, pos):
+		return self.pickUpDecompose(pos)
+
+	def putSomewhere(self):
+		pos = self.getHookPosition()
 		free = None
 		while True:
 			freeY = randrange(-self.reach, self.reach+1) + self.position[0]
@@ -159,14 +170,15 @@ class Crane:
 			if free != pos and f and f.type == Field.STORAGE_TYPE and f.countCrates() < f.STACK_MAX_SIZE:# and (free not in commonFields):
 				break
 		print '%s drops garbage' % (self.id)
-		return self.moveContainerDecompose(pos, free)
+		return self.putDownDecompose(free)
 
-	def passOn(self, pos, crane):
+	def passOn(self, crane):
 		commonFields = self.map.commonStorageFields(self,crane)
 		rect = self.map.commonArea(self, crane)
 		(topLeft, h, w) = rect
 		common = (commonFields[randrange(0, len(commonFields))])
 		i = 0
+		pos = self.getHookPosition()
 		while self.map.distance(pos, common) > self.map.distance(pos, commonFields[i]):
 			msg = Message(self, Message.NEGOTIATE_FIELD, [common,  commonFields[i]])		       
 			self.sendMessageInst(crane, msg)
@@ -185,9 +197,10 @@ class Crane:
 			else:
 			    break
 			
-		return self.moveContainerDecompose(pos, common)
+		return self.putDownDecompose(common)
 	
-	def loadShip(self, pos):
+	def loadShip(self):
+		pos = self.getHookPosition()
 		shipPos = None
 		while True:
 			shipY = pos[0]
@@ -202,7 +215,7 @@ class Crane:
 			f = self.map[shipPos]
 			if shipPos != self.position and f and f.type == Field.SHIP_TYPE and f.isStackable() and f.countCrates() < f.STACK_MAX_SIZE:
 				break
-		return self.moveContainerDecompose(pos, shipPos)
+		return self.putDownDecompose(shipPos)
 
 	
 	def keepBusy(self):
@@ -222,6 +235,7 @@ class Crane:
 	def decomposeTask(self, task):
 		dec = {
 			TAKE_OFF:  self.takeOff,
+			PUT_SMWHR: self.putSomewhere,
 			PASS_ON:   self.passOn,
 			LOAD_SHIP: self.loadShip,
 			KEEP_BUSY: self.keepBusy,
@@ -367,9 +381,10 @@ class Crane:
 				pkg = self.getPackageToDeliver()
 				if pkg:
 					pkg_pos = self.onMyArea[pkg]
-					tasks = [(TAKE_OFF, [pkg_pos])] * self.getPackageLevel(pkg)
+					tasks = [(TAKE_OFF, [pkg_pos]), (PUT_SMWHR, [])] * self.getPackageLevel(pkg)
 					if self.directToShip:
-						tasks.append((LOAD_SHIP, [pkg_pos]))
+						tasks.append((TAKE_OFF, [pkg_pos]))
+						tasks.append((LOAD_SHIP, []))
 						tasks.append((INFORM_SHIP, [pkg]))
 					else:
 
@@ -380,7 +395,8 @@ class Crane:
 							pos = min(int(abs(gauss(0, 0.7) * n)), n-1)
 							nextCrane = self.toShip[pos]
 
-						tasks.append((PASS_ON, [pkg_pos, nextCrane]))
+						tasks.append((TAKE_OFF, [pkg_pos]))
+						tasks.append((PASS_ON, [nextCrane]))
 						tasks.append((MEASURE_TIME, [pkg, nextCrane.id]))
 					self.tasks.extend(tasks)
 				else:
