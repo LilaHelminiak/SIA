@@ -24,7 +24,7 @@ class Ship:
 		b = len(self.crates) % part
 		while( b <= len(self.crates)):
 			msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
-			a = b + 1
+			a = b
 			b = b + part
 			time.sleep(2)
 			for i in xrange(len(self.cranes)):
@@ -32,6 +32,10 @@ class Ship:
 	
 	def readMessage(self, msg):
 		print "SHIP: crane", msg.sender.id, "sent message:", msg.data
+		if msg.type == Message.PACKAGE_LOADED:
+			t = time.time()
+			for c in self.cranes:
+				c.addMessage(Message(self, Message.PACKAGE_DELIVERED, [msg.data, t]))
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
