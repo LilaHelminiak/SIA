@@ -18,7 +18,7 @@ class Forklift:
 		self.running = True
 
 	def fixPos(self):
-		self.position = (round(self.position[0]), round(self.position[1]))
+		self.position = (int(round(self.position[0])), int(round(self.position[1])))
 
 	def fixAngle(self):
 		fixedValues = {(0,1): 0, (0,-1): pi, (1,0):-pi/2, (-1,0):-3*pi/2}
@@ -38,16 +38,16 @@ class Forklift:
 		for i in range(0, int(pi/2 / ANG)):
 			self.angle += ANG
 			sleep(0.02)
-		self.fixAngle()
 		self.dir = (-self.dir[1], self.dir[0])
+		self.fixAngle()
 
 	def turnRight(self):
 		ANG = 0.02
 		for i in range(0, int(pi/2 / ANG)):
 			self.angle -= ANG
 			sleep(0.02)
-		self.fixAngle()
 		self.dir = (self.dir[1], -self.dir[0])
+		self.fixAngle()
 
 	def grab(self):
 		sleep(1)
@@ -88,15 +88,14 @@ class Forklift:
 					self.turnLeft()
 				else:
 					self.turnRight()
-			print(self.position, self.dir, 180.0*(self.angle/pi))
+			print("Forklift", self.id, "-", self.position, self.dir, 180.0*(self.angle/pi))
 
 	def doWork(self):
 		self.continueWay()
-		
 
 	def mainLoop(self):
-		SLEEP_SEC = 0.02
-
+		
+		# just for test:
 		self.position=(0,0)
 		self.way = deque([(1,0), (1,1), (1,2), (2,2)])
 		
@@ -110,6 +109,4 @@ class Forklift:
 
 	def createThread(self):
 		return Thread(target=self.mainLoop, args=[])
-
-
 
