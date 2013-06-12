@@ -21,7 +21,7 @@ class Forklift:
 		self.position = (int(round(self.position[0])), int(round(self.position[1])))
 
 	def fixAngle(self):
-		fixedValues = {(0,1): 0, (0,-1): pi, (1,0):-pi/2, (-1,0):-3*pi/2}
+		fixedValues = {(0,1): 0, (0,-1): pi, (1,0):pi/2, (-1,0):3*pi/2}
 		self.angle = fixedValues[self.dir]
 
 	def forward(self):
