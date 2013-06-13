@@ -9,6 +9,7 @@ from random import randrange, choice, gauss
 
 (MOVE_ARM, HOOK_UP, HOOK_DOWN, GRAB, DROP, SEND_MSG, START_MEASURE) = range(10, 17)
 (TAKE_OFF, PUT_SMWHR, PASS_ON, LOAD_SHIP, KEEP_BUSY, INFORM_SHIP, MEASURE_TIME) = range(20,27)
+INFINITY = 10000000
 
 class Crane:
 	def __init__(self, id, position, rangeSight, reach, height, map):
@@ -21,10 +22,11 @@ class Crane:
 		self.hookDistance = 1
 		self.hookHeight   = height
 		self.neighbours   = []
-		self.craneInfo = {}
 		self.map = map
 
 		self.crate = None
+		self.averageTime = 0
+		self.passedPackages = 0
 
 		self.messages = Queue()
 		self.negotiate = Queue()
@@ -33,6 +35,7 @@ class Crane:
 
 		self.directToShip = 0 #boolean value if the crane has direct access to the ship
 		self.toShip = []
+		self.hops = INFINITY # number of agents between crane and ship on the way
 		self.wanted = set() #all packages wanted by ship
 		self.onMyArea = {} #packages on my field after examineSurroundings
 		self.inWay  = {}
@@ -75,7 +78,7 @@ class Crane:
 		receiver.addMessage(message)
 
 	def startMeasureTimeInst(self, containerId, craneId):
-		self.inWay[containerId] = (craneId, time())
+		self.inWay[containerId] = time()
 	
 	def doAtomicInst(self, inst):
 		cmd = {
@@ -122,7 +125,7 @@ class Crane:
 		return [(SEND_MSG,[receiver, message])]
 			
 	def startMeasureTimeDecompose(self, containerId, craneId):
-		return [(START_MEASURE, [containerId, craneId])]
+		return [(START_MEASURE, [containerId])]
 			
 	# this function decompose "move crate from pos1 to pos2" action
 	# to atomic instructions
@@ -249,22 +252,15 @@ class Crane:
 	def informOthers(self, recipients):
 		for c in recipients:
 			if c not in self.toShip:
-				res = c.addMessage(Message(self, Message.HAVE_SHIP_PATH, []))
-				print self.id, "I have informed", c.id, "with res", res
+				c.addMessage(Message(self, Message.HAVE_SHIP_PATH, self.hops))
 
 	def stopMeasureTime(self, containerId, stop):
-		(craneId, start) = self.inWay[containerId]
+		start = self.inWay[containerId]
 		measure = stop - start
+		self.averageTime = self.averageTime * self.passedPackages + measure / (self.passedPackages+1)
+		self.passedPackages += 1
 		del (self.inWay[containerId])
-		(t, n) = self.craneInfo[craneId]
-		if n == 0:
-			(t, n) = (measure, 1)
-		else:
-			n1 = n+1
-			(t, n) = ((t*n+measure)/n1, n1)
-		self.craneInfo[craneId] = (t, n)
-		self.sortToShip()
-		print str(self.id)+" my statistics: "+str(self.craneInfo)+" to ship: "+str([c.id for c in self.toShip])
+		print "%d my time: %f" % (self.id,self.averageTime)
 
 	def addMessage(self, msg):
 		self.messages.put(msg)
@@ -272,9 +268,6 @@ class Crane:
 	def addNegotiate(self, msg):
 		print "%s sentds to %s %s)" % (msg.sender.id, self.id, msg.data)
 		self.negotiate.put(msg)
-
-	def sortToShip(self):
-		self.toShip.sort(key = lambda k: self.craneInfo[k.id][0])
 
 	def addNeighbours(self, l):
 		self.neighbours.extend(l)
@@ -310,11 +303,16 @@ class Crane:
 			self.wanted.discard(p)
 
 		elif msg.type == Message.HAVE_SHIP_PATH:
-			if msg.sender not in self.toShip:
-				self.toShip.append(msg.sender)
-				self.craneInfo[msg.sender.id] = (-1, 0)
-			print self.id, "To ship through", msg.sender.id
-			self.informOthers(self.neighbours)
+			if msg.data+1 < self.hops:
+				self.hops = msg.data + 1
+				self.toShip = [msg.sender]
+				self.informOthers(self.neighbours)
+				print(">>> %d: new best way by %d in %d step[s]" % (self.id, msg.sender.id, self.hops))
+			elif msg.data+1 == self.hops:
+				if msg.sender not in self.toShip:
+					self.toShip.append(msg.sender)
+					self.informOthers(self.neighbours)
+					print(">>> %d: next best way by %d in %d step[s]" % (self.id, msg.sender.id, self.hops))
 		
 		elif msg.type == Message.NEGOTIATE_FIELD:
 			old_field = msg.data[0]
@@ -373,6 +371,7 @@ class Crane:
 	def doWork(self):
 		if self.directToShip == 1:
 			self.directToShip = 2
+			self.hops = 0
 			print self.id, "I'm near ship! Must tell others!"
 			self.informOthers(self.neighbours)
 		
@@ -387,13 +386,12 @@ class Crane:
 						tasks.append((LOAD_SHIP, []))
 						tasks.append((INFORM_SHIP, [pkg]))
 					else:
+						# add here negotiations #
 
-						# here we make decision to which crane pass package:
-						nextCrane = self.toShip[0]
-						if self.craneInfo[nextCrane.id][0] > 0:
-							n = len(self.toShip)
-							pos = min(int(abs(gauss(0, 0.7) * n)), n-1)
-							nextCrane = self.toShip[pos]
+						##########################
+						n = len(self.toShip)
+						pos = min(int(abs(gauss(0, 0.7) * n)), n-1)
+						nextCrane = self.toShip[pos]
 
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((PASS_ON, [nextCrane]))

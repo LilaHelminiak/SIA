@@ -15,7 +15,10 @@ class Forklift:
 		self.messages = Queue()
 		self.way = deque()
 		self.crate = None
+
+		self.thread = self.createThread()
 		self.running = True
+		self.thread.start()
 
 	def fixPos(self):
 		self.position = (int(round(self.position[0])), int(round(self.position[1])))
@@ -96,8 +99,8 @@ class Forklift:
 	def mainLoop(self):
 		
 		# just for test:
-		self.position=(0,0)
-		self.way = deque([(1,0), (1,1), (1,2), (2,2)])
+		self.position=(0,2)
+		self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 3)
 		
 		while self.running:
 			while self.running and False:#self.map.pause:
