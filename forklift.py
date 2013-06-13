@@ -40,7 +40,7 @@ class Forklift:
 	def turnLeft(self):
 		ANG = 0.02
 		for i in range(0, int(pi/2 / ANG)):
-			self.angle += ANG
+			self.angle -= ANG
 			sleep(0.02)
 		self.dir = (-self.dir[1], self.dir[0])
 		self.fixAngle()
@@ -48,7 +48,7 @@ class Forklift:
 	def turnRight(self):
 		ANG = 0.02
 		for i in range(0, int(pi/2 / ANG)):
-			self.angle -= ANG
+			self.angle += ANG
 			sleep(0.02)
 		self.dir = (self.dir[1], -self.dir[0])
 		self.fixAngle()
@@ -101,7 +101,7 @@ class Forklift:
 		
 		# just for test:
 		self.position=(0,2)
-		self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 3)
+		self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])
 		
 		while self.running:
 			while self.running and False:#self.map.pause:
