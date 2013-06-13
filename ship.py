@@ -14,6 +14,7 @@ class Ship:
 		self.bottomRow = bottomRow  # bottom row of the ship (ship's stern)
 		self.cranes = cranes
 		self.crates = crates
+		self.neededCrates = []
 		self.running = True
 		self.messages = Queue()
 		self.createThread().start()
@@ -24,6 +25,7 @@ class Ship:
 		b = len(self.crates) % part
 		while( b <= len(self.crates)):
 			msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
+			self.neededCrates += self.crates[a:b]
 			a = b
 			b = b + part
 			time.sleep(2)
@@ -34,6 +36,7 @@ class Ship:
 		print "SHIP: crane", msg.sender.id, "sent message:", msg.data
 		if msg.type == Message.PACKAGE_LOADED:
 			t = time.time()
+			self.neededCrates.remove(msg.data)
 			for c in self.cranes:
 				c.addMessage(Message(self, Message.PACKAGE_DELIVERED, [msg.data, t]))
 

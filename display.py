@@ -23,7 +23,8 @@ class Display:
 		self.colsPerScreen = int(self.width / self.fieldSize)
 		self.rowsPerScreen = int(self.height / self.fieldSize)
 		self.upperLeftFieldCoors = (0, 0)
-		self.showingInfoForObject = None  # reference to an object (Field / Crane / Ship)		
+		self.showingInfoForObject = None  # reference to an object (Field / Crane / Ship)
+		self.displayHUD = True		
 
 		pygame.init()
 		self.clock = pygame.time.Clock()
@@ -84,12 +85,51 @@ class Display:
 
 	def drawCratesOnField(self, ids, rect):
 		for i in xrange(len(ids)):
+			pygame.draw.rect(self.windowSurface, Display.WHITE, (rect.centerx - ((self.fontSize / 2) * 3 + 8) / 2, rect.bottom - (self.fontSize + 1) - (self.fieldSize / 4) * i, (self.fontSize / 2) * 3 + 10, self.fontSize + 2))
 			pygame.draw.rect(self.windowSurface, Display.BLACK, (rect.centerx - ((self.fontSize / 2) * 3 + 8) / 2, rect.bottom - (self.fontSize + 1) - (self.fieldSize / 4) * i, (self.fontSize / 2) * 3 + 10, self.fontSize + 2), 1)
 			crateId = self.basicFont.render(self.crateIdToString(ids[i]), True, Display.BLACK, Display.WHITE)
 			crateIdRect = crateId.get_rect()
 			crateIdRect.centerx = rect.centerx
 			crateIdRect.centery = rect.bottom - (self.fieldSize / 4) * i - self.fontSize / 2
 			self.windowSurface.blit(crateId, crateIdRect)
+
+
+	def drawHUD(self, map):
+		if self.displayHUD == False:
+			return
+		hudFontSize = self.fontSize + int(self.fontSize / 2)
+		hudFont = pygame.font.SysFont(None, hudFontSize)
+		neededCratesText = hudFont.render("The ship needs:", True, Display.BLACK)
+		neededCratesTextRect = neededCratesText.get_rect()
+		neededCratesTextRect.left = self.width - 200
+		neededCratesTextRect.top = 20
+		self.windowSurface.blit(neededCratesText, neededCratesTextRect)
+
+		crateList = map.ship.neededCrates
+		for i in xrange(len(crateList)):
+			if i >= len(crateList):
+				break
+			crateText = hudFont.render(str(self.crateIdToString(crateList[i])), True, Display.BLACK)
+			crateTextRect = crateText.get_rect()
+			crateTextRect.left = self.width - 50
+			crateTextRect.top = 20 + (hudFontSize + 2) * (i + 1)
+			self.windowSurface.blit(crateText, crateTextRect)
+
+
+	def drawInformationWindow(self, map):
+		if self.showingInfoForObject == None:
+			return
+		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 4, self.height / 4, self.width / 2, self.height / 2))
+		info = "FIELD"
+		if self.showingInfoForObject == map.ship:
+			info = "SHIP"
+		elif self.showingInfoForObject.type == Field.CRANE_TYPE:
+			info = "CRANE"
+		text = self.basicFont.render(info, True, Display.BLACK, Display.WHITE)
+		textRect = text.get_rect()
+		textRect.centerx = infoRect.centerx
+		textRect.centery = infoRect.centery
+		self.windowSurface.blit(text, textRect)
 
 
 	def drawStuff(self, map):
@@ -122,23 +162,8 @@ class Display:
 			rowDisplay += 1
 
 		self.drawCranesArms(cranesList)
+		self.drawHUD(map)
 		self.drawInformationWindow(map)
-
-
-	def drawInformationWindow(self, map):
-		if self.showingInfoForObject == None:
-			return
-		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 4, self.height / 4, self.width / 2, self.height / 2))
-		info = "FIELD"
-		if self.showingInfoForObject == map.ship:
-			info = "SHIP"
-		elif self.showingInfoForObject.type == Field.CRANE_TYPE:
-			info = "CRANE"
-		text = self.basicFont.render(info, True, Display.BLACK, Display.WHITE)
-		textRect = text.get_rect()
-		textRect.centerx = infoRect.centerx
-		textRect.centery = infoRect.centery
-		self.windowSurface.blit(text, textRect)
 
 
 	def moveDisplay(self, map, position):
@@ -175,6 +200,8 @@ class Display:
 					self.moveDisplay(map, (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[1] - 1))
 				if event.key == K_RIGHT:
 					self.moveDisplay(map, (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[1] + 1))
+				if event.key == K_h:
+					self.displayHUD ^= True
 			if event.type == MOUSEBUTTONDOWN:
 				clickRow = self.upperLeftFieldCoors[0] + int(floor(event.pos[1] / self.fieldSize))
 				clickCol = self.upperLeftFieldCoors[1] + int(floor(event.pos[0] / self.fieldSize))
