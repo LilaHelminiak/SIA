@@ -14,7 +14,6 @@ class Forklift:
 		self.map = map
 		self.messages = Queue()
 		self.way = deque()
-		self.crate = None
 
 		self.thread = self.createThread()
 		self.running = True
@@ -22,6 +21,8 @@ class Forklift:
 
 	def fixPos(self):
 		self.position = (int(round(self.position[0])), int(round(self.position[1])))
+		self.map[(self.position[0] - self.dir[0]), (self.position[1] - self.dir[1])].objectsList = []
+		self.map[self.position].objectsList = [self]
 
 	def fixAngle(self):
 		fixedValues = {(0,1): 0, (0,-1): pi, (1,0):pi/2, (-1,0):3*pi/2}
@@ -112,4 +113,7 @@ class Forklift:
 
 	def createThread(self):
 		return Thread(target=self.mainLoop, args=[])
+
+	def stop(self):
+		self.running = False
 

@@ -1,5 +1,7 @@
 import sys
 from crate import *
+from forklift import *
+
 
 class Field:
 
@@ -71,3 +73,12 @@ class Field:
 		if self.type != Field.CRANE_TYPE:
 			raise Exception("Invalid Request")
 		return self.objectsList[0]
+
+
+	def isForkliftPresent(self):
+		if self.type == Field.CRANE_TYPE or self.objectsList == []:
+			return None
+		if isinstance(self.objectsList[0], Forklift):
+			return self.objectsList[0]
+		return None
+

@@ -83,6 +83,30 @@ class Display:
 			pygame.draw.circle(self.windowSurface, Display.BLACK, (int(craneRect.centerx + cos(crane.angle) * hookDist), int(craneRect.centery + sin(crane.angle) * hookDist)), int(max(5, (crane.hookHeight / crane.height) * 10)), 0)
 
 
+	def drawForklift(self, forklift, rect):
+
+		armLen = 3 * self.fieldSize / 8
+		pygame.draw.line(self.windowSurface, Display.BLACK, (rect.centerx, rect.centery), (rect.centerx + cos(forklift.angle) * armLen, rect.centery + sin(forklift.angle) * armLen), 4)
+
+		forkliftRect = pygame.draw.circle(self.windowSurface, (150, 150, 150), (rect.centerx, rect.centery), self.fieldSize / 4, 0)
+
+		forkliftIdText = self.basicFont.render(str(forklift.id), True, Display.WHITE, (150, 150, 150))
+		forkliftIdTextRect = forkliftIdText.get_rect()
+		forkliftIdTextRect.centerx = forkliftRect.centerx
+		forkliftIdTextRect.centery = forkliftRect.centery - self.fieldSize / 8
+		self.windowSurface.blit(forkliftIdText, forkliftIdTextRect)
+
+		if forklift.crate == None:
+			heldCrateId = "---"
+		else:
+			heldCrateId = self.crateIdToString(forklift.crate.id)
+		forkliftHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE, (150, 150, 150))
+		forkliftHeldCrateIdRect = forkliftHeldCrateId.get_rect()
+		forkliftHeldCrateIdRect.centerx = forkliftRect.centerx
+		forkliftHeldCrateIdRect.centery = forkliftRect.centery + self.fieldSize / 8
+		self.windowSurface.blit(forkliftHeldCrateId, forkliftHeldCrateIdRect)
+
+
 	def drawCratesOnField(self, ids, rect):
 		for i in xrange(len(ids)):
 			pygame.draw.rect(self.windowSurface, Display.WHITE, (rect.centerx - ((self.fontSize / 2) * 3 + 8) / 2, rect.bottom - (self.fontSize + 1) - (self.fieldSize / 4) * i, (self.fontSize / 2) * 3 + 10, self.fontSize + 2))
@@ -150,6 +174,11 @@ class Display:
 					crane = map.field(row, col).getCrane()
 					craneRect = self.drawCraneBody(crane, rect)
 					cranesList.append((crane, craneRect))
+					continue
+
+				forklift = map.field(row, col).isForkliftPresent()
+				if forklift != None:
+					self.drawForklift(forklift, rect)
 					continue
 				
 				if map.field(row, col).countCrates() == 0:

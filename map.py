@@ -35,6 +35,8 @@ class Map:
 		self.map[3][5] = Field(Field.CRANE_TYPE, [c3])
 		self.map[5][3] = Field(Field.CRANE_TYPE, [c4])
 		self.map[4][1] = Field(Field.CRANE_TYPE, [c5])
+		f1 = Forklift(1, (0, 2), self)
+		self.map[0][2] = Field(Field.STORAGE_TYPE, [f1])
 		self.ship = Ship(self, [c1, c2, c3, c4, c5], [7, 772, 8, 5, 2, 32], 0, self.rowNum - 1, 2.0)
 		for i in xrange(self.ship.topRow, self.ship.bottomRow + 1):
 			self.map[i][self.colNum - 1] = Field(Field.SHIP_TYPE, [])
@@ -48,6 +50,8 @@ class Map:
 			for j in xrange(self.colNum):
 				if self.fieldType(i, j) == Field.CRANE_TYPE:
 					self.field(i, j).getCrane().stop()
+				elif self.map[i][j].isForkliftPresent() != None:
+					self.map[i][j].isForkliftPresent().stop()
 		self.ship.stop()
 
 	def __call__(self, pos):
