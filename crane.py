@@ -70,7 +70,9 @@ class Crane:
 	def dropInst(self):
 		self.hookHeight = abs(round(self.hookHeight))
 		pos = self.getHookPosition()
+		self.map[pos].lock.acquire()
 		self.map[pos].putCrateOnTop(self.crate)
+		self.map[pos].lock.release()
 		print self.id, "drop on", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
 		self.crate = None
 
@@ -154,7 +156,7 @@ class Crane:
 			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate2, shift2) +
 			self.hookDownDecompose(self.height - stack2Size) +
-			self.dropDecompose()
+			self.dropDecompose() 
 		)
 
 	# functions of tasks that crane has to do
@@ -297,7 +299,7 @@ class Crane:
 			self.wanted.update(msg.data)
 			print "got message: ship needs %s \n" % (self.wanted)
 			for pkg in msg.data:
-				if pkg in self.onMyArea:
+				if self.onMyArea.has_key(pkg):
 					print "%s is on %s" % (pkg, self.onMyArea[pkg])
 
 		elif msg.type == Message.PACKAGE_DELIVERED:
@@ -373,13 +375,12 @@ class Crane:
 		packageNeighbours = []
 		negotiateWith = []
 		wanted = list(self.wanted)
+		isMine=None
 		for pkg in wanted:
 			if pkg in self.onMyArea:
-				if self.id == 4:
-					print 'PACKAGE ON MY FIELD: %s' % (pkg)
 				pkg_pos = self.onMyArea[pkg]
 				if self.map[pkg_pos].lock.acquire(0):
-					print '++++++++++++++++++++++%s aquires %s' %(self.id, pkg_pos)
+					print '++++++++++++++++++++++++++%s want %s and aquires %s' %(self.id, pkg, pkg_pos)
 					isMine = True
 					for c in self.neighbours:
 						if c.isInArea(pkg_pos):
@@ -391,19 +392,24 @@ class Crane:
 						while(self.negotiate.empty()):
 							sleep(0.2)
 							self.readMessages()
-						print 'got msg %s' % (self.id)
 						ans = self.negotiate.get()
 						if ans.type == Message.NEGOTIATE_ANSWER:
 							answer = ans.data[0]
 							if answer == 'yes':
 								isMine = True
+								print '###########################%s won %s' % (self.id, pkg)
 							elif answer == 'no':
 								isMine = False							
 								self.wanted.remove(pkg)
 								self.map[pkg_pos].lock.release()
-								print '---------no---------------%s relises %s' %(self.id, pkg_pos)
+								print '---------no---------------%s relises %s and removes % from wanted. lost to %s' %(self.id, pkg_pos, pkg, crane.id)
 								break
+							else:
+								print '????????????????????????????another answer: %s' % (answer)
+						else:
+							print '????????????????????????????ans not in this type'
 				else:
+					'++++++++++++++++++++++++++%s DID NOT aquired %s and pos %s' %(self.id, pkg, pkg_pos)
 					continue					
 				'''isMine = True
 				pkg_pos = self.onMyArea[pkg]
@@ -439,6 +445,7 @@ class Crane:
 					if self.directToShip:
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((LOAD_SHIP, []))
+						print '---------------load-------- %s releases %s on %s' % (self.id, pkg, pkg_pos)
 						self.map[pkg_pos].lock.release()
 						tasks.append((INFORM_SHIP, [pkg]))
 					else:
@@ -451,7 +458,7 @@ class Crane:
 
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((PASS_ON, [nextCrane]))
-						print '-------------pass----------------%s relises %s' %(self.id, pkg_pos)
+						print '---------------pass-------- %s releases %s on %s' % (self.id, pkg, pkg_pos)
 						self.map[pkg_pos].lock.release()
 						tasks.append((MEASURE_TIME, [pkg, nextCrane.id]))
 					self.tasks.extend(tasks)					
