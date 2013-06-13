@@ -205,19 +205,24 @@ class Crane:
 	def loadShip(self):
 		pos = self.getHookPosition()
 		shipPos = None
-		while True:
-			shipY = pos[0]
-			if pos[0] == self.position[0]:
-				if pos[0] + 1 < self.map.rowNum:
-					shipY = pos[0]+1
-				else:
-					shipY = pos[0]-1
-			shipX = self.map.colNum-1
-			shipY = self.position[0]+randrange(-self.reach, self.reach)
+		shipY = pos[0]
+		if pos[0] == self.position[0]:
+			if pos[0] + 1 < self.map.rowNum:
+				shipY = pos[0]+1
+			else:
+				shipY = pos[0]-1
+		shipX = self.map.colNum-1
+		while True:		
+			#shipY = self.position[0]+randrange(-self.reach, self.reach)
 			shipPos = (shipY, shipX)
 			f = self.map[shipPos]
 			if shipPos != self.position and f and f.type == Field.SHIP_TYPE and f.isStackable() and f.countCrates() < f.STACK_MAX_SIZE:
 				break
+			if shipY + 1 < self.map.rowNum:
+				shipY = shipY + 1
+			else:
+				shipY = pos[0]-self.reach
+			print 'lost in while'
 		return self.putDownDecompose(shipPos)
 
 	
@@ -266,7 +271,6 @@ class Crane:
 		self.messages.put(msg)
 		
 	def addNegotiate(self, msg):
-		print "%s sentds to %s %s)" % (msg.sender.id, self.id, msg.data)
 		self.negotiate.put(msg)
 
 	def addNeighbours(self, l):
@@ -332,6 +336,23 @@ class Crane:
 					response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
 			msg.sender.addNegotiate(response)
 			
+		elif msg.type == Message.NEGOTIATE_OWNERSHIP: #[pkg, diverlyTime, hops]
+			if self.hops < msg.data[2]:
+				response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
+			elif self.hops == msg.data[2]:
+				if self.averageTime < msg.data[1]:
+					response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
+				elif self.averageTime == msg.data[1]:
+					if self.id < msg.sender.id:
+						response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
+					else:
+						response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
+				else:
+					response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
+			else:
+				response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
+			msg.sender.addNegotiate(response)
+			
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
@@ -349,9 +370,42 @@ class Crane:
 	def getPackageToDeliver(self):
 		res = None
 		resLvl = 10000
-		for pkg in self.wanted:
+		packageNeighbours = []
+		negotiateWith = []
+		wanted = list(self.wanted)
+		for pkg in wanted:
 			if pkg in self.onMyArea:
-				isMine = True
+				if self.id == 4:
+					print 'PACKAGE ON MY FIELD: %s' % (pkg)
+				pkg_pos = self.onMyArea[pkg]
+				if self.map[pkg_pos].lock.acquire(0):
+					print '++++++++++++++++++++++%s aquires %s' %(self.id, pkg_pos)
+					isMine = True
+					for c in self.neighbours:
+						if c.isInArea(pkg_pos):
+							packageNeighbours.append(c)
+							print '%s is surrounded by %s' % (pkg, c.id)
+					msg = Message(self, Message.NEGOTIATE_OWNERSHIP, [pkg, self.averageTime, self.hops]) 
+					for crane in packageNeighbours:
+						self.sendMessageInst(crane, msg)
+						while(self.negotiate.empty()):
+							sleep(0.2)
+							self.readMessages()
+						print 'got msg %s' % (self.id)
+						ans = self.negotiate.get()
+						if ans.type == Message.NEGOTIATE_ANSWER:
+							answer = ans.data[0]
+							if answer == 'yes':
+								isMine = True
+							elif answer == 'no':
+								isMine = False							
+								self.wanted.remove(pkg)
+								self.map[pkg_pos].lock.release()
+								print '---------no---------------%s relises %s' %(self.id, pkg_pos)
+								break
+				else:
+					continue					
+				'''isMine = True
 				pkg_pos = self.onMyArea[pkg]
 				if pkg_pos[1] == self.map.colNum-1:
 					isMine = False
@@ -359,12 +413,13 @@ class Crane:
 					for c in self.toShip:
 						if c.isInArea(pkg_pos):
 							isMine = False
-							break
+							break'''
 				if isMine:
 					pkgLvl = self.getPackageLevel(pkg)
 					if resLvl > pkgLvl:
 						res = pkg
 						resLvl = pkgLvl
+					break
 		return res
 
 
@@ -384,6 +439,7 @@ class Crane:
 					if self.directToShip:
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((LOAD_SHIP, []))
+						self.map[pkg_pos].lock.release()
 						tasks.append((INFORM_SHIP, [pkg]))
 					else:
 						# add here negotiations #
@@ -395,8 +451,10 @@ class Crane:
 
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((PASS_ON, [nextCrane]))
+						print '-------------pass----------------%s relises %s' %(self.id, pkg_pos)
+						self.map[pkg_pos].lock.release()
 						tasks.append((MEASURE_TIME, [pkg, nextCrane.id]))
-					self.tasks.extend(tasks)
+					self.tasks.extend(tasks)					
 				else:
 					self.tasks.append((KEEP_BUSY, []))
 			else:
