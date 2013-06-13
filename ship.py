@@ -9,7 +9,8 @@ import thread
 
 class Ship:
 
-	def __init__(self, cranes, crates, topRow, bottomRow, timeInterval):
+	def __init__(self, map, cranes, crates, topRow, bottomRow, timeInterval):
+		self.map = map
 		self.topRow = topRow  # top row of the ship (ship's bow)
 		self.bottomRow = bottomRow  # bottom row of the ship (ship's stern)
 		self.timeInterval = timeInterval
@@ -38,7 +39,18 @@ class Ship:
 		a = 0
 		b = len(self.crates) % part
 		lastSendTime = time.time()
+		blimeyTheMapHasPaused = False
+		timeWhenPauseStarted = 0.0
 		while (self.running):
+			if self.map.pause == True:
+				if blimeyTheMapHasPaused == True:
+					continue
+				blimeyTheMapHasPaused = True
+				timeWhenPauseStarted = time.time()
+				continue
+			elif blimeyTheMapHasPaused == True: # The map is no longer paused
+				blimeyTheMapHasPaused = False
+				lastSendTime += (time.time() - timeWhenPauseStarted)
 			if b <= len(self.crates) and time.time() - lastSendTime >= self.timeInterval:
 				msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
 				self.neededCrates += self.crates[a:b]
