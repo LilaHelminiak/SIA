@@ -9,9 +9,10 @@ import thread
 
 class Ship:
 
-	def __init__(self, cranes, crates, topRow, bottomRow):
+	def __init__(self, cranes, crates, topRow, bottomRow, timeInterval):
 		self.topRow = topRow  # top row of the ship (ship's bow)
 		self.bottomRow = bottomRow  # bottom row of the ship (ship's stern)
+		self.timeInterval = timeInterval
 		self.cranes = cranes
 		self.crates = crates
 		self.neededCrates = []
@@ -19,19 +20,6 @@ class Ship:
 		self.messages = Queue()
 		self.createThread().start()
 
-	def sendMessage(self):
-		part = 4
-		a = 0
-		b = len(self.crates) % part
-		while( b <= len(self.crates)):
-			msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
-			self.neededCrates += self.crates[a:b]
-			a = b
-			b = b + part
-			time.sleep(2)
-			for i in xrange(len(self.cranes)):
-				self.cranes[i].addMessage(msg)
-	
 	def readMessage(self, msg):
 		print "SHIP: crane", msg.sender.id, "sent message:", msg.data
 		if msg.type == Message.PACKAGE_LOADED:
@@ -46,11 +34,19 @@ class Ship:
 			left -= 1  
 		
 	def mainLoop(self):
-		part = 5
-		count = len(self.crates)/part
-		i=0
-		thread.start_new_thread(self.sendMessage, ())
+		part = 4
+		a = 0
+		b = len(self.crates) % part
+		lastSendTime = time.time()
 		while (self.running):
+			if b <= len(self.crates) and time.time() - lastSendTime >= self.timeInterval:
+				msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
+				self.neededCrates += self.crates[a:b]
+				a = b
+				b = b + part
+				for i in xrange(len(self.cranes)):
+					self.cranes[i].addMessage(msg)
+				lastSendTime = time.time()
 			self.readMessages()
 		
 	def createThread(self):

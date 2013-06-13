@@ -35,7 +35,7 @@ class Map:
 		self.map[3][5] = Field(Field.CRANE_TYPE, [c3])
 		self.map[5][3] = Field(Field.CRANE_TYPE, [c4])
 		self.map[4][1] = Field(Field.CRANE_TYPE, [c5])
-		self.ship = Ship([c1, c2, c3, c4, c5], [7, 772, 8, 5, 2, 32], 0, self.rowNum - 1)
+		self.ship = Ship([c1, c2, c3, c4, c5], [7, 772, 8, 5, 2, 32], 0, self.rowNum - 1, 2.0)
 		for i in xrange(self.ship.topRow, self.ship.bottomRow + 1):
 			self.map[i][self.colNum - 1] = Field(Field.SHIP_TYPE, [])
 
