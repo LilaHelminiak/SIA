@@ -1,7 +1,7 @@
 import sys
 from crate import *
 from forklift import *
-
+import threading
 
 class Field:
 
@@ -12,6 +12,7 @@ class Field:
 	def __init__(self, type, objectsList = []):
 		self.type = type
 		self.objectsList = objectsList
+		self.lock = threading.RLock()
 
 
 	def isStackable(self):
