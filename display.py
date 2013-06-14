@@ -55,7 +55,7 @@ class Display:
 	def drawCraneBody(self, crane, rect):
 		craneRect = pygame.draw.circle(self.windowSurface, (100, 100, 100), (rect.centerx, rect.centery), self.fieldSize / 2, 0)
 					
-		craneIdText = self.basicFont.render(str(crane.id), True, Display.WHITE, (100, 100, 100))
+		craneIdText = self.basicFont.render(str(crane.id), True, Display.WHITE)
 		craneIdTextRect = craneIdText.get_rect()
 		craneIdTextRect.centerx = craneRect.centerx - self.fieldSize / 4
 		craneIdTextRect.centery = craneRect.centery - self.fieldSize / 4
@@ -65,7 +65,7 @@ class Display:
 			heldCrateId = "---"
 		else:
 			heldCrateId = self.crateIdToString(crane.crate.id)
-		craneHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE, (100, 100, 100))
+		craneHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE)
 		craneHeldCrateIdRect = craneHeldCrateId.get_rect()
 		craneHeldCrateIdRect.centerx = craneRect.centerx
 		craneHeldCrateIdRect.centery = craneRect.centery + self.fieldSize / 4
@@ -86,11 +86,13 @@ class Display:
 	def drawForklift(self, forklift, rect):
 
 		armLen = 3 * self.fieldSize / 8
-		pygame.draw.line(self.windowSurface, Display.BLACK, (rect.centerx, rect.centery), (rect.centerx + cos(forklift.angle) * armLen, rect.centery + sin(forklift.angle) * armLen), 4)
+		shiftY = 0 #(forklift.position[0] - int(forklift.position[0])) * self.fieldSize
+		shiftX = 0 #(forklift.position[1] - int(forklift.position[1])) * self.fieldSize
+		pygame.draw.line(self.windowSurface, Display.BLACK, (rect.centerx + shiftX, rect.centery + shiftY), (rect.centerx + shiftX + cos(forklift.angle) * armLen, rect.centery + shiftY + sin(forklift.angle) * armLen), 4)
 
-		forkliftRect = pygame.draw.circle(self.windowSurface, (150, 150, 150), (rect.centerx, rect.centery), self.fieldSize / 4, 0)
+		forkliftRect = pygame.draw.circle(self.windowSurface, (70, 170, 170), (rect.centerx + shiftX, rect.centery + shiftY), self.fieldSize / 4, 0)
 
-		forkliftIdText = self.basicFont.render(str(forklift.id), True, Display.WHITE, (150, 150, 150))
+		forkliftIdText = self.basicFont.render(str(forklift.id), True, Display.WHITE)
 		forkliftIdTextRect = forkliftIdText.get_rect()
 		forkliftIdTextRect.centerx = forkliftRect.centerx
 		forkliftIdTextRect.centery = forkliftRect.centery - self.fieldSize / 8
@@ -100,7 +102,7 @@ class Display:
 			heldCrateId = "---"
 		else:
 			heldCrateId = self.crateIdToString(forklift.crate.id)
-		forkliftHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE, (150, 150, 150))
+		forkliftHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE)
 		forkliftHeldCrateIdRect = forkliftHeldCrateId.get_rect()
 		forkliftHeldCrateIdRect.centerx = forkliftRect.centerx
 		forkliftHeldCrateIdRect.centery = forkliftRect.centery + self.fieldSize / 8
@@ -143,16 +145,56 @@ class Display:
 	def drawInformationWindow(self, map):
 		if self.showingInfoForObject == None:
 			return
-		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 4, self.height / 4, self.width / 2, self.height / 2))
+		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 8, self.height / 8, 6 * self.width / 8, 6 * self.height / 8))
 		info = "FIELD"
 		if self.showingInfoForObject == map.ship:
 			info = "SHIP"
+			labels = ["CRATE ID", "REQUESTED", "DELIVERED", "WAITED", "CRANE ID"]
+			for i in xrange(5):
+				text = self.basicFont.render(labels[i], True, Display.BLACK, Display.WHITE)
+				textRect = text.get_rect()
+				textRect.left = infoRect.left + 10 + i * 140
+				textRect.top = infoRect.top + 30
+				self.windowSurface.blit(text, textRect)
+
+			for i in xrange(len(map.ship.infoData)):
+				values = [self.crateIdToString(map.ship.infoData[i][0]), "-", "-", "-", "-"]
+				for j in xrange(1, 4):
+					if map.ship.infoData[i][j] != None:
+						values[j] = "%.2f" % map.ship.infoData[i][j]
+				if map.ship.infoData[i][4] != None:
+						values[4] = str(map.ship.infoData[i][4])
+				for j in xrange(5):
+					text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
+					textRect = text.get_rect()
+					textRect.left = infoRect.left + 10 + j * 140
+					textRect.top = infoRect.top + 30 + (i + 1) * 30
+					self.windowSurface.blit(text, textRect)
 		elif self.showingInfoForObject.type == Field.CRANE_TYPE:
 			info = "CRANE"
+			labels = ["ID", "CRATE", "AVERAGE TIME", "# PASSED"]
+			for i in xrange(4):
+				text = self.basicFont.render(labels[i], True, Display.BLACK, Display.WHITE)
+				textRect = text.get_rect()
+				textRect.left = infoRect.left + 10 + i * 140
+				textRect.top = infoRect.top + 30
+				self.windowSurface.blit(text, textRect)
+			crane = self.showingInfoForObject.getCrane()
+			values = [str(crane.id), "-", "-", str(crane.passedPackages)]
+			if crane.crate != None:
+				values[1] = self.crateIdToString(crane.crate.id)
+			if crane.averageTime != 0:
+				values[2] = "%.2f" % crane.averageTime
+			for j in xrange(4):
+				text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
+				textRect = text.get_rect()
+				textRect.left = infoRect.left + 10 + j * 140
+				textRect.top = infoRect.top + 30 + 30
+				self.windowSurface.blit(text, textRect)
 		text = self.basicFont.render(info, True, Display.BLACK, Display.WHITE)
 		textRect = text.get_rect()
 		textRect.centerx = infoRect.centerx
-		textRect.centery = infoRect.centery
+		textRect.centery = infoRect.top + 10
 		self.windowSurface.blit(text, textRect)
 
 
@@ -203,7 +245,7 @@ class Display:
 
 	def startShowingInformationWindow(self, map, position):
 		(row, col) = position
-		if col == map.colNum and row < map.rowNum:
+		if col in (map.colNum - 1, map.colNum) and row < map.rowNum:
 			self.showingInfoForObject = map.ship
 		elif map.inMapBounds(position):
 			self.showingInfoForObject = map.field(row, col)

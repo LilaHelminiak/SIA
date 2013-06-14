@@ -104,7 +104,7 @@ class Forklift:
 		self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])
 		
 		while self.running:
-			while self.running and False:#self.map.pause:
+			while self.running and self.map.pause:
 				sleep(0.1)
 			
 			self.examineSurroundings()

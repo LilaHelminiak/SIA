@@ -17,6 +17,10 @@ class Ship:
 		self.cranes = cranes
 		self.crates = crates
 		self.neededCrates = []
+		self.infoData = []  # (crateId, requestTime, deliveryTime, waitTime, craneId)
+		for crate in crates:
+			self.infoData.append([crate, None, None, None, None])
+		self.startTime = time.time()
 		self.running = True
 		self.messages = Queue()
 		self.createThread().start()
@@ -26,13 +30,17 @@ class Ship:
 		if msg.type == Message.PACKAGE_LOADED:
 			t = time.time()
 			self.neededCrates.remove(msg.data)
+			infoIndex = [tup[0] for tup in self.infoData].index(msg.data)
+			self.infoData[infoIndex][2] = t - self.startTime
+			self.infoData[infoIndex][3] = self.infoData[infoIndex][2] - self.infoData[infoIndex][1]
+			self.infoData[infoIndex][4] = msg.sender.id
 			for c in self.cranes:
 				c.addMessage(Message(self, Message.PACKAGE_DELIVERED, [msg.data, t]))
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
 			self.readMessage(self.messages.get())
-			left -= 1  
+			left -= 1
 		
 	def mainLoop(self):
 		part = 4
@@ -54,6 +62,8 @@ class Ship:
 			if b <= len(self.crates) and time.time() - lastSendTime >= self.timeInterval:
 				msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
 				self.neededCrates += self.crates[a:b]
+				for i in xrange(a, b):
+					self.infoData[i][1] = time.time() - self.startTime
 				a = b
 				b = b + part
 				for i in xrange(len(self.cranes)):
