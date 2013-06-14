@@ -70,7 +70,7 @@ class Crane:
 	def dropInst(self):
 		self.hookHeight = abs(round(self.hookHeight))
 		pos = self.getHookPosition()
-		self.map[pos].lock.acquire()
+		#self.map[pos].lock.acquire()
 		self.map[pos].putCrateOnTop(self.crate)
 		self.map[pos].lock.release()
 		print self.id, "drop on", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
@@ -151,7 +151,7 @@ class Crane:
 	def putDownDecompose(self, pos2):
 		(rotate2, shift2) = self.calcAngleAndShift(pos2, self.angle, self.hookDistance)
 		stack2Size = self.map[pos2].countCrates()
-
+		self.map[pos2].lock.acquire()
 		return (
 			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate2, shift2) +
@@ -362,8 +362,8 @@ class Crane:
 			left -= 1
 
 	def isInArea(self, pos):
-		(x, y) = self.position
-		return max(abs(pos[0]-x), abs(pos[1]-y)) <= self.reach
+		(x, y) = self.position #6,2
+		return max(abs(pos[0]-x), abs(pos[1]-y)) <= self.reach #r:2, 3,5
 
 	def getPackageLevel(self, crateId):
 		(y,x) = self.onMyArea[crateId]
@@ -372,11 +372,11 @@ class Crane:
 	def getPackageToDeliver(self):
 		res = None
 		resLvl = 10000
-		packageNeighbours = []
 		negotiateWith = []
 		wanted = list(self.wanted)
 		isMine=None
 		for pkg in wanted:
+			packageNeighbours = []
 			if pkg in self.onMyArea:
 				pkg_pos = self.onMyArea[pkg]
 				if self.map[pkg_pos].lock.acquire(0):
@@ -447,6 +447,7 @@ class Crane:
 						tasks.append((LOAD_SHIP, []))
 						print '---------------load-------- %s releases %s on %s' % (self.id, pkg, pkg_pos)
 						self.map[pkg_pos].lock.release()
+						self.wanted.remove(pkg)
 						tasks.append((INFORM_SHIP, [pkg]))
 					else:
 						# add here negotiations #
@@ -460,6 +461,7 @@ class Crane:
 						tasks.append((PASS_ON, [nextCrane]))
 						print '---------------pass-------- %s releases %s on %s' % (self.id, pkg, pkg_pos)
 						self.map[pkg_pos].lock.release()
+						self.wanted.remove(pkg)
 						tasks.append((MEASURE_TIME, [pkg, nextCrane.id]))
 					self.tasks.extend(tasks)					
 				else:
