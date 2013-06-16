@@ -86,8 +86,8 @@ class Display:
 	def drawForklift(self, forklift, rect):
 
 		armLen = 3 * self.fieldSize / 8
-		shiftY = 0 #(forklift.position[0] - int(forklift.position[0])) * self.fieldSize
-		shiftX = 0 #(forklift.position[1] - int(forklift.position[1])) * self.fieldSize
+		shiftY = int((forklift.position[0] - int(forklift.position[0])) * self.fieldSize)
+		shiftX = int((forklift.position[1] - int(forklift.position[1])) * self.fieldSize)
 		pygame.draw.line(self.windowSurface, Display.BLACK, (rect.centerx + shiftX, rect.centery + shiftY), (rect.centerx + shiftX + cos(forklift.angle) * armLen, rect.centery + shiftY + sin(forklift.angle) * armLen), 4)
 
 		forkliftRect = pygame.draw.circle(self.windowSurface, (70, 170, 170), (rect.centerx + shiftX, rect.centery + shiftY), self.fieldSize / 4, 0)

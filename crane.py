@@ -282,7 +282,7 @@ class Crane:
 		self.onMyArea.clear()
 		for y in xrange(self.position[0]-self.reach, self.position[0]+self.reach+1):
 			for x in xrange(self.position[1]-self.reach, self.position[1]+self.reach+1):
-				if( x < self.map.colNum and y < self.map.rowNum):
+				if self.map.inMapBounds((y, x)):
 					pos = (y,x)
 					field = self.map[pos]
 

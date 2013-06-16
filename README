@@ -1,1 +1,26 @@
-SIA - team project
+Agents in the Harbour - README file
+
+
+ABOUT
+-----
+
+The project is developed as a team project within the "Systemy inteligentnych agentów" ("Multi-agent systems") class at the University of Wrocław (UWr). The goal of the application is to simulate the ship cargo loading process. The main participants of this process are stationary cranes and mobile forklifts (different types of agents). The agents cooperate to load the ship as quickly as possible.
+
+The application is written in Python 2.x. To run it, run main.py.
+
+
+AUTHORS
+-------
+
+Lilianna Hełminiak [LilaHelminiak]
+Maciej Kaim [mkaim]
+Wojciech Kuprianowicz [w-ku]
+
+
+LINKS
+-----
+
+Repository:      http://github.com/LilaHelminiak/SIA
+Wiki:            http://github.com/LilaHelminiak/SIA/wiki
+Issue tracker:   http://github.com/LilaHelminiak/SIA/issues
+

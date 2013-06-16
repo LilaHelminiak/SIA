@@ -7,43 +7,59 @@ from ship import *
 
 class Map:
 
-	def __init__(self, rowNum, colNum, display):
-		self.rowNum = rowNum
-		self.colNum = colNum
-		self.display = display
+	def __init__(self, fileName):
+		try:
+			f = open(fileName, "r")
+		except:
+			raise Exception("Error when reading the file.")
+
 		self.pause = True
-		self.map = [[Field(Field.STORAGE_TYPE, []) for col in xrange(colNum)] for row in xrange(rowNum)]
-		
-		self.map[0][0] = Field(Field.STORAGE_TYPE, [Crate(1, 3), Crate(5, 2), Crate(22, 3)])
-		self.map[2][6] = Field(Field.STORAGE_TYPE, [Crate(11, 3), Crate(12, 2), Crate(13, 3), Crate(10,1)])
-		self.map[4][6] = Field(Field.STORAGE_TYPE, [Crate(14, 3), Crate(15, 2), Crate(16, 3), Crate(17,2)])
-		self.map[4][4] = Field(Field.STORAGE_TYPE, [Crate(8, 3), Crate(772, 2)])
-		self.map[3][2] = Field(Field.STORAGE_TYPE, [Crate(7, 3), Crate(432,3), Crate(433,1)])
-		self.map[6][2] = Field(Field.STORAGE_TYPE, [Crate(2, 3), Crate(32,3), Crate(33,1)])
-		c1 = Crane(1, (1, 1), 3, 1, 10, self)
-		c2 = Crane(2, (2, 3), 3, 1, 10, self)
-		c3 = Crane(3, (3, 5), 3, 2, 10, self)
-		c4 = Crane(4, (5, 3), 3, 1, 10, self)
-		c5 = Crane(5, (4, 1), 3, 1, 10, self)
-		c1.addNeighbours([c2])
-		c2.addNeighbours([c1, c3, c5])
-		c3.addNeighbours([c2, c4])
-		c4.addNeighbours([c3, c5])
-		c5.addNeighbours([c2, c4])
-		self.map[1][1] = Field(Field.CRANE_TYPE, [c1])
-		self.map[2][3] = Field(Field.CRANE_TYPE, [c2])
-		self.map[3][5] = Field(Field.CRANE_TYPE, [c3])
-		self.map[5][3] = Field(Field.CRANE_TYPE, [c4])
-		self.map[4][1] = Field(Field.CRANE_TYPE, [c5])
-		f1 = Forklift(1, (0, 2), self)
-		self.map[0][2] = Field(Field.STORAGE_TYPE, [f1])
-		self.ship = Ship(self, [c1, c2, c3, c4, c5], [7, 772, 8, 5, 2, 32], 0, self.rowNum - 1, 2.0)
+		self.display = Display(940, 750, 100, 25)
+
+		t = [int(x) for x in f.readline().split()] # mapHeight mapWidth
+		f.readline() # empty line
+		self.rowNum = t[0]
+		self.colNum = t[1]
+		self.map = [[Field(Field.STORAGE_TYPE, []) for col in xrange(self.colNum)] for row in xrange(self.rowNum)]
+
+		cratesNum = int(f.readline()) # cratesNumber
+		for _ in xrange(cratesNum):
+			t = [int(x) for x in f.readline().split()] # crate_id crate_weight crate_row crate_column
+			self.map[t[2]][t[3]].putCrateOnTop(Crate(t[0], t[1]))
+		f.readline() # empty line
+
+		cranesNum = int(f.readline()) # cranesNumber
+		cranesList = []
+		for _ in xrange(cranesNum):
+			t = [int(x) for x in f.readline().split()] # crane_id crane_row crane_column crane_range crane_reach crane_height
+			crane = Crane(t[0], (t[1], t[2]), t[3], t[4], t[5], self)
+			cranesList.append(crane)
+			self.map[t[1]][t[2]] = Field(Field.CRANE_TYPE, [crane])
+		f.readline() # empty line
+
+		for crane1 in cranesList:
+			for crane2 in cranesList:
+				if crane1 == crane2:
+					continue
+				if self.commonArea(crane1, crane2) != None:
+					crane1.addNeighbours([crane2])
+
+		forkliftsNum = int(f.readline()) # forkliftsNumber
+		for _ in xrange(forkliftsNum):
+			t = [int(x) for x in f.readline().split()] # forklift_id forklift_row forklift_column
+			forklift = Forklift(t[0], (t[1], t[2]), self)
+			self.map[t[1]][t[2]] = Field(Field.STORAGE_TYPE, [forklift])
+		f.readline() # empty line
+
+		t = [int(x) for x in f.readline().split()] # shipFrontCoor shipBackCoor cratesPerMessage messageDelayTime
+		neededCrates = [int(x) for x in f.readline().split()] # needed_crate_1_id ... needed_crate_n_id
+		self.ship = Ship(self, cranesList, neededCrates, t[0], t[1], t[2], t[3])
 		for i in xrange(self.ship.topRow, self.ship.bottomRow + 1):
 			self.map[i][self.colNum - 1] = Field(Field.SHIP_TYPE, [])
+		f.close()
 
-		# start
 		self.pause = False
-		
+
 	
 	def stopThreads(self):
 		for i in xrange(self.rowNum):
@@ -53,6 +69,7 @@ class Map:
 				elif self.map[i][j].isForkliftPresent() != None:
 					self.map[i][j].isForkliftPresent().stop()
 		self.ship.stop()
+
 
 	def __call__(self, pos):
 		if(self.inMapBounds(pos) == False):

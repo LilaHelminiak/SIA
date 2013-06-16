@@ -9,10 +9,11 @@ import thread
 
 class Ship:
 
-	def __init__(self, map, cranes, crates, topRow, bottomRow, timeInterval):
+	def __init__(self, map, cranes, crates, topRow, bottomRow, cratesPerMessage, timeInterval):
 		self.map = map
 		self.topRow = topRow  # top row of the ship (ship's bow)
 		self.bottomRow = bottomRow  # bottom row of the ship (ship's stern)
+		self.cratesPerMessage = cratesPerMessage
 		self.timeInterval = timeInterval
 		self.cranes = cranes
 		self.crates = crates
@@ -43,9 +44,8 @@ class Ship:
 			left -= 1
 		
 	def mainLoop(self):
-		part = 4
 		a = 0
-		b = len(self.crates) % part
+		b = self.cratesPerMessage
 		lastSendTime = time.time()
 		blimeyTheMapHasPaused = False
 		timeWhenPauseStarted = 0.0
@@ -65,7 +65,7 @@ class Ship:
 				for i in xrange(a, b):
 					self.infoData[i][1] = time.time() - self.startTime
 				a = b
-				b = b + part
+				b = b + self.cratesPerMessage
 				for i in xrange(len(self.cranes)):
 					self.cranes[i].addMessage(msg)
 				lastSendTime = time.time()
