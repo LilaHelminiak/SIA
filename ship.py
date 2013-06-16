@@ -45,7 +45,7 @@ class Ship:
 		
 	def mainLoop(self):
 		a = 0
-		b = self.cratesPerMessage
+		b = min(self.cratesPerMessage, len(self.crates))
 		lastSendTime = time.time()
 		blimeyTheMapHasPaused = False
 		timeWhenPauseStarted = 0.0
@@ -59,13 +59,13 @@ class Ship:
 			elif blimeyTheMapHasPaused == True: # The map is no longer paused
 				blimeyTheMapHasPaused = False
 				lastSendTime += (time.time() - timeWhenPauseStarted)
-			if b <= len(self.crates) and time.time() - lastSendTime >= self.timeInterval:
+			if a != b and b <= len(self.crates) and time.time() - lastSendTime >= self.timeInterval:
 				msg = Message(self, Message.SEARCH_PACKAGE, self.crates[a:b])
 				self.neededCrates += self.crates[a:b]
 				for i in xrange(a, b):
 					self.infoData[i][1] = time.time() - self.startTime
 				a = b
-				b = b + self.cratesPerMessage
+				b = min(b + self.cratesPerMessage, len(self.crates))
 				for i in xrange(len(self.cranes)):
 					self.cranes[i].addMessage(msg)
 				lastSendTime = time.time()
