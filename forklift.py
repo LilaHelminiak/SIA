@@ -105,7 +105,6 @@ class Forklift:
 		self.continueWay()
 
 	def mainLoop(self):
-		print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MY ID: %s, MY POS: %s' % (self.id, self.position)
 		# just for test:
 		#self.position=(0,2)
 		#self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])

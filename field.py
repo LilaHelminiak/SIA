@@ -12,7 +12,7 @@ class Field:
 	def __init__(self, type, objectsList = []):
 		self.type = type
 		self.objectsList = objectsList
-		self.lock = threading.RLock()
+		self.lock = threading.BoundedSemaphore(value=1)
 
 
 	def isStackable(self):

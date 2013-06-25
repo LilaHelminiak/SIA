@@ -44,7 +44,6 @@ class Map:
 			for x in xrange(self.colNum):
 				roadList = []
 				if self.map[y][x].type == Field.ROAD_TYPE:
-					print 'ROAD TYPE' + str((y,x))
 					if self.inMapBounds((y-1,x)) and self.map[y-1][x].type == Field.ROAD_TYPE:
 						roadList.append((y-1,x))
 					if self.inMapBounds((y+1,x)) and self.map[y+1][x].type == Field.ROAD_TYPE:
@@ -89,11 +88,11 @@ class Map:
 
 		forkliftsNum = len(self.island) - 1 #int(f.readline()) # forkliftsNumber
 		forkliftList = []
-		print '@@@' + str(forkliftsNum)
-		for i in xrange(forkliftsNum):
+		#print '@@@' + str(forkliftsNum)
+		#for i in xrange(forkliftsNum):
 			#t = [int(x) for x in f.readline().split()] # forklift_id forklift_row forklift_column
-			forklift = Forklift(i+1, (self.island[i][0][0], self.island[i][0][1]), self) #Forklift(t[0], (t[1], t[2]), self)
-			forkliftList.append(forklift)
+		#	forklift = Forklift(i+1, (self.island[i][0][0], self.island[i][0][1]), self) #Forklift(t[0], (t[1], t[2]), self)
+		#	forkliftList.append(forklift)
 			#self.map[t[1]][t[2]] = Field(Field.STORAGE_TYPE, [forklift])
 		#f.readline() # empty line
 
@@ -103,10 +102,6 @@ class Map:
 		for i in xrange(self.ship.topRow, self.ship.bottomRow + 1):
 			self.map[i][self.colNum - 1] = Field(Field.SHIP_TYPE, [])
 		f.close()
-		
-		print 'edges!' + str(self.edge)
-		print '!!!!!!!!!!!!!!!!!!ISLANDS:'
-		print self.island
 
 		self.pause = False
 
