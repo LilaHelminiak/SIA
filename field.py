@@ -1,6 +1,5 @@
 import sys
 from crate import *
-from forklift import *
 import threading
 
 class Field:
@@ -77,6 +76,7 @@ class Field:
 
 
 	def isForkliftPresent(self):
+		from forklift import Forklift
 		if self.type == Field.CRANE_TYPE or self.objectsList == []:
 			return None
 		if isinstance(self.objectsList[0], Forklift):

@@ -3,6 +3,7 @@ from math import *
 from field import *
 from display import *
 from crane import *
+from forklift import *
 from ship import *
 
 class Map:
