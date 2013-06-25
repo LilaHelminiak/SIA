@@ -65,15 +65,14 @@ class Crane:
 		self.hookHeight = abs(round(self.hookHeight))
 		pos = self.getHookPosition()
 		self.crate = self.map[pos].removeCrateFromTop()
-		print self.id, "grab from", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
+		print self.id, "released and grab from", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
 	
 	def dropInst(self):
 		self.hookHeight = abs(round(self.hookHeight))
 		pos = self.getHookPosition()
-		#self.map[pos].lock.acquire()
 		self.map[pos].putCrateOnTop(self.crate)
 		self.map[pos].lock.release()
-		print self.id, "drop on", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
+		print self.id, "released and drop on", pos, ", hook height:", self.hookHeight, "id: ", self.crate.id
 		self.crate = None
 
 	def sendMessageInst(self, receiver, message):
@@ -140,7 +139,7 @@ class Crane:
 	def pickUpDecompose(self, pos1):
 		(rotate1, shift1) = self.calcAngleAndShift(pos1, self.angle, self.hookDistance)
 		stack1Size = self.map[pos1].countCrates()
-
+		#self.map[pos1].lock.acquire(True)
 		return (
 			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate1, shift1) +
@@ -151,7 +150,7 @@ class Crane:
 	def putDownDecompose(self, pos2):
 		(rotate2, shift2) = self.calcAngleAndShift(pos2, self.angle, self.hookDistance)
 		stack2Size = self.map[pos2].countCrates()
-		self.map[pos2].lock.acquire()
+		self.map[pos2].lock.acquire(True)
 		return (
 			self.hookUpDecompose(self.height - self.hookHeight) +
 			self.moveArmDecompose(rotate2, shift2) +
@@ -224,7 +223,6 @@ class Crane:
 				shipY = shipY + 1
 			else:
 				shipY = pos[0]-self.reach
-			print 'lost in while'
 		return self.putDownDecompose(shipPos)
 
 	
@@ -297,7 +295,6 @@ class Crane:
 	def readMessage(self, msg):
 		if msg.type == Message.SEARCH_PACKAGE:
 			self.wanted.update(msg.data)
-			print "got message: ship needs %s \n" % (self.wanted)
 			for pkg in msg.data:
 				if self.onMyArea.has_key(pkg):
 					print "%s is on %s" % (pkg, self.onMyArea[pkg])
@@ -331,7 +328,6 @@ class Crane:
 				else:
 					response = Message(self, Message.NEGOTIATE_ANSWER, ["no"] )
 			else:
-				print "#####old field dist: %s, new dist: %s" % (self.map.distance(old_field, (self.map.colNum-1, old_field[1])), self.map.distance(new_field, (self.map.colNum-1, new_field[1])))
 				if(self.map.distance(old_field, (self.map.colNum-1, old_field[1]))) >= self.map.distance(new_field, (self.map.colNum-1, new_field[1])):
 					response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
 				else:
@@ -379,13 +375,12 @@ class Crane:
 			packageNeighbours = []
 			if pkg in self.onMyArea:
 				pkg_pos = self.onMyArea[pkg]
-				if self.map[pkg_pos].lock.acquire(0):
+				if self.map[pkg_pos].lock.acquire(False):
 					print '++++++++++++++++++++++++++%s want %s and aquires %s' %(self.id, pkg, pkg_pos)
 					isMine = True
 					for c in self.neighbours:
 						if c.isInArea(pkg_pos):
 							packageNeighbours.append(c)
-							print '%s is surrounded by %s' % (pkg, c.id)
 					msg = Message(self, Message.NEGOTIATE_OWNERSHIP, [pkg, self.averageTime, self.hops]) 
 					for crane in packageNeighbours:
 						self.sendMessageInst(crane, msg)
@@ -397,29 +392,14 @@ class Crane:
 							answer = ans.data[0]
 							if answer == 'yes':
 								isMine = True
-								print '###########################%s won %s' % (self.id, pkg)
 							elif answer == 'no':
 								isMine = False							
 								self.wanted.remove(pkg)
 								self.map[pkg_pos].lock.release()
-								print '---------no---------------%s relises %s and removes % from wanted. lost to %s' %(self.id, pkg_pos, pkg, crane.id)
+								print '---------no---------------%s relises %s and removes %s from wanted. lost to %s' %(self.id, pkg_pos, pkg, crane.id)
 								break
-							else:
-								print '????????????????????????????another answer: %s' % (answer)
-						else:
-							print '????????????????????????????ans not in this type'
 				else:
-					'++++++++++++++++++++++++++%s DID NOT aquired %s and pos %s' %(self.id, pkg, pkg_pos)
 					continue					
-				'''isMine = True
-				pkg_pos = self.onMyArea[pkg]
-				if pkg_pos[1] == self.map.colNum-1:
-					isMine = False
-				else:
-					for c in self.toShip:
-						if c.isInArea(pkg_pos):
-							isMine = False
-							break'''
 				if isMine:
 					pkgLvl = self.getPackageLevel(pkg)
 					if resLvl > pkgLvl:
@@ -445,8 +425,8 @@ class Crane:
 					if self.directToShip:
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((LOAD_SHIP, []))
-						print '---------------load-------- %s releases %s on %s' % (self.id, pkg, pkg_pos)
 						self.map[pkg_pos].lock.release()
+						print '---------------load-------- %s released %s on %s' % (self.id, pkg, pkg_pos)
 						self.wanted.remove(pkg)
 						tasks.append((INFORM_SHIP, [pkg]))
 					else:
@@ -456,11 +436,10 @@ class Crane:
 						n = len(self.toShip)
 						pos = min(int(abs(gauss(0, 0.7) * n)), n-1)
 						nextCrane = self.toShip[pos]
-
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((PASS_ON, [nextCrane]))
-						print '---------------pass-------- %s releases %s on %s' % (self.id, pkg, pkg_pos)
 						self.map[pkg_pos].lock.release()
+						print '---------------pass-------- %s released in PASS_ON %s on %s' % (self.id, pkg, pkg_pos)
 						self.wanted.remove(pkg)
 						tasks.append((MEASURE_TIME, [pkg, nextCrane.id]))
 					self.tasks.extend(tasks)					

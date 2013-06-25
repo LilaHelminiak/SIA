@@ -165,9 +165,9 @@ class Forklift:
 		elif self.currentTask == EXPLORE:
 			if self.toVisit:
 				pos = self.findNearestUnvisitedField()
+				print ">>>POS: ", pos
 				self.way = self.findPath(pos)
 
-				print ">>>>>%d WAY: %s" % (self.id,  self.way)
 		else:
 			self.doNothing()
 
