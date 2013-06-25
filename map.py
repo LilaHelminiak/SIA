@@ -27,11 +27,11 @@ class Map:
 
 		
 		cranesNum = int(f.readline()) # cranesNumber
-		cranesList = []
+		self.cranesList = []
 		for _ in xrange(cranesNum):
 			t = [int(x) for x in f.readline().split()] # crane_id crane_row crane_column crane_range crane_reach crane_height
 			crane = Crane(t[0], (t[1], t[2]), t[3], t[4], t[5], self)
-			cranesList.append(crane)
+			self.cranesList.append(crane)
 			self.map[t[1]][t[2]] = Field(Field.CRANE_TYPE, [crane])
 			for y in xrange(t[1]-t[4], t[1]+t[4]+1):
 				for x in xrange(t[2]-t[4], t[2]+t[4]+1):
@@ -79,26 +79,26 @@ class Map:
 			self.map[t[2]][t[3]].putCrateOnTop(Crate(t[0], t[1]))
 		f.readline() # empty line		
 
-		for crane1 in cranesList:
-			for crane2 in cranesList:
+		for crane1 in self.cranesList:
+			for crane2 in self.cranesList:
 				if crane1 == crane2:
 					continue
 				if self.commonArea(crane1, crane2) != None:
 					crane1.addNeighbours([crane2])
 
 		forkliftsNum = len(self.island) - 1 #int(f.readline()) # forkliftsNumber
-		forkliftList = []
+		self.forkliftsList = [Forklift(1, (0, 3), self)] #self.forkliftsList = []
 		#print '@@@' + str(forkliftsNum)
 		#for i in xrange(forkliftsNum):
 			#t = [int(x) for x in f.readline().split()] # forklift_id forklift_row forklift_column
 		#	forklift = Forklift(i+1, (self.island[i][0][0], self.island[i][0][1]), self) #Forklift(t[0], (t[1], t[2]), self)
-		#	forkliftList.append(forklift)
+		#	self.forkliftsList.append(forklift)
 			#self.map[t[1]][t[2]] = Field(Field.STORAGE_TYPE, [forklift])
 		#f.readline() # empty line
 
 		t = [int(x) for x in f.readline().split()] # shipFrontCoor shipBackCoor cratesPerMessage messageDelayTime
 		neededCrates = [int(x) for x in f.readline().split()] # needed_crate_1_id ... needed_crate_n_id
-		self.ship = Ship(self, cranesList, forkliftList, neededCrates, t[0], t[1], t[2], t[3])
+		self.ship = Ship(self, self.cranesList, self.forkliftsList, neededCrates, t[0], t[1], t[2], t[3])
 		for i in xrange(self.ship.topRow, self.ship.bottomRow + 1):
 			self.map[i][self.colNum - 1] = Field(Field.SHIP_TYPE, [])
 		f.close()
@@ -107,12 +107,10 @@ class Map:
 
 	
 	def stopThreads(self):
-		for i in xrange(self.rowNum):
-			for j in xrange(self.colNum):
-				if self.fieldType(i, j) == Field.CRANE_TYPE:
-					self.field(i, j).getCrane().stop()
-				elif self.map[i][j].isForkliftPresent() != None:
-					self.map[i][j].isForkliftPresent().stop()
+		for crane in self.cranesList:
+			crane.stop()
+		for forklift in self.forkliftsList:
+			forklift.stop()
 		self.ship.stop()
 
 
