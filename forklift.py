@@ -108,7 +108,8 @@ class Forklift:
 		# just for test:
 		#self.position=(0,2)
 		#self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])
-		self.way = deque([(0,4), (0,3), (0,2), (0,3)] * 2 + [(1,4), (1,5), (0,5)])
+		#self.way = deque([(0,4), (0,3), (0,2), (0,3)] * 2 + [(1,4), (1,5), (0,5)])
+		self.way = deque([(8, 1), (8, 2), (8, 3), (8, 2), (8, 3), (7, 3), (7, 4), (8, 4), (8, 3)])
 
 		while self.running:
 			while self.running and self.map.pause:

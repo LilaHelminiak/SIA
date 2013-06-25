@@ -87,7 +87,7 @@ class Map:
 					crane1.addNeighbours([crane2])
 
 		forkliftsNum = len(self.island) - 1 #int(f.readline()) # forkliftsNumber
-		self.forkliftsList = [Forklift(1, (0, 3), self)] #self.forkliftsList = []
+		self.forkliftsList = [Forklift(1, (8, 0), self)] #self.forkliftsList = []
 		#print '@@@' + str(forkliftsNum)
 		#for i in xrange(forkliftsNum):
 			#t = [int(x) for x in f.readline().split()] # forklift_id forklift_row forklift_column

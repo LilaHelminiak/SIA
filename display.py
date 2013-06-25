@@ -90,8 +90,8 @@ class Display:
 			(left, right) = (self.upperLeftFieldCoors[1], self.upperLeftFieldCoors[1] + self.colsPerScreen - 1)
 			if row >= up - 1 and row <= down + 1 and col >= left - 1 and col <= right + 1:
 				(row, col) = (row - up, col - left)
-				y = int(row) * self.fieldSize + self.fieldSize / 2 + (row - int(row)) * self.fieldSize
-				x = int(col) * self.fieldSize + self.fieldSize / 2 + (col - int(col)) * self.fieldSize
+				y = int(int(row) * self.fieldSize + self.fieldSize / 2 + (row - int(row)) * self.fieldSize)
+				x = int(int(col) * self.fieldSize + self.fieldSize / 2 + (col - int(col)) * self.fieldSize)
 				armLen = 3 * self.fieldSize / 8
 				pygame.draw.line(self.windowSurface, Display.BLACK, (x, y), (x + cos(forklift.angle) * armLen, y + sin(forklift.angle) * armLen), 4)
 				forkliftRect = pygame.draw.circle(self.windowSurface, (70, 170, 170), (x, y), self.fieldSize / 4, 0)
