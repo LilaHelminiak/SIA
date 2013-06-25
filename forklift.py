@@ -95,8 +95,8 @@ class Forklift:
 		a = 1
 		for y in range(self.position[0]-a, self.position[0]+a+1):
 			for x in range(self.position[1]-a, self.position[1]+a+1):
+				self.toVisit.discard((y,x))
 				if self.map.inMapBounds((y,x)) and self.map.fieldType(y,x) == Field.ROAD_TYPE:
-					self.toVisit.discard((y,x))
 					crates = self.map[y,x].getAllCratesIds()
 					if crates:
 						for c in crates:
