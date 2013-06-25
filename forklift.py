@@ -3,6 +3,7 @@ from threading import Thread
 from time import sleep, time
 from collections import deque
 from math import pi
+from message import Message
 
 class Forklift:
 	def __init__(self, id, pos, map):
@@ -14,6 +15,8 @@ class Forklift:
 		self.map = map
 		self.messages = Queue()
 		self.way = deque()
+		self.wanted = set() #all packages wanted by ship
+		self.myIsland = id
 
 		self.thread = self.createThread()
 		self.running = True
@@ -69,7 +72,9 @@ class Forklift:
 		self.messages.put(msg)
 
 	def readMessage(self, msg):
-		pass
+		if msg.type == Message.SEARCH_PACKAGE:
+			self.wanted.update(msg.data)
+			print "got message: ship needs %s \n" % (self.wanted)
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
@@ -77,7 +82,9 @@ class Forklift:
 			left -= 1
 
 	def examineSurroundings(self):
-		pass
+		pass#self.way = self.map.island[self.myIsland]
+				
+		
 
 	def continueWay(self):
 		if self.way:
@@ -98,17 +105,18 @@ class Forklift:
 		self.continueWay()
 
 	def mainLoop(self):
-		
+		print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MY ID: %s, MY POS: %s' % (self.id, self.position)
 		# just for test:
-		self.position=(0,2)
-		self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])
-		
+		#self.position=(0,2)
+		#self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])
+		self.way = deque([(0,4), (0,3), (0,2), (0,3)] * 2 + [(1,4), (1,5), (0,5)])
+
 		while self.running:
 			while self.running and self.map.pause:
 				sleep(0.1)
-			
-			self.examineSurroundings()
+				
 			self.readMessages()
+			self.examineSurroundings()			
 			self.doWork()
 
 	def createThread(self):
