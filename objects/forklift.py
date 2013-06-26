@@ -198,7 +198,7 @@ class Forklift:
 			if crane == None:
 				self.wayToCrane = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
 			else:
-				self.wayToCrane = self.findPath(lambda x: crane.isInArea)
+				self.wayToCrane = self.findPath(lambda x: crane.isInArea(x))
 
 			self.currentTask = GRAB
 
