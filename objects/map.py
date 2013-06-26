@@ -8,11 +8,7 @@ from ship import *
 
 class Map:
 
-	def __init__(self, fileName):
-		try:
-			f = open(fileName, "r")
-		except:
-			raise Exception("Error when reading the file.")
+	def __init__(self, f):
 
 		self.pause = True
 		self.display = Display(940, 750, 100, 25)

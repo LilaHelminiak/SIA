@@ -1,14 +1,18 @@
 import sys
-from crane import *
-from ship import *
-from map import *
+from objects import Map
 
 
 if __name__ == '__main__':
 	if len(sys.argv) == 2:
-		map = Map(sys.argv[1])
+		fileName = sys.argv[1]
 	else:
-		map = Map("maps/map1")
+		fileName = "maps/map1"
+	try:
+		f = open(fileName, "r")
+	except:
+		raise Exception("Error when reading the file.")
+	map = Map(f)
+	f.close()
 
 	while True:
 		map.drawMap()
