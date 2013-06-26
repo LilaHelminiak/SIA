@@ -27,6 +27,7 @@ class Forklift:
 		self.founded = {} # founded packages on current island
 		self.freeFields = set() # fields of island free of packages stacks
 		self.currentTask = EXPLORE # current forklift task
+		self.neighbours = set()
 
 		self.field = None 
 
@@ -101,11 +102,23 @@ class Forklift:
 			self.readMessage(self.messages.get())
 			left -= 1
 
+	def addNewNeighbours(self, pos):
+		for p in [(pos[0]+a[0], pos[1]+a[1]) for a in [(0,1), (1,0), (0,-1), (-1,0)]]:
+			if self.map.inMapBounds(p):
+				for c in self.map.cranesList:
+					if c.isInArea(p):
+						self.neighbours.add(c)
+						print ("FORKLIFT %d: fouded crane %d!!" % (self.id, c.id))
+
+
 	def examineSurroundings(self):
 		a = 1
 		for y in range(self.position[0]-a, self.position[0]+a+1):
 			for x in range(self.position[1]-a, self.position[1]+a+1):
-				self.toVisit.discard((y,x))
+
+				if (y,x) in self.toVisit:
+					self.addNewNeighbours((y,x))
+					self.toVisit.discard((y,x))
 
 				if (y,x) == self.position:
 					continue
@@ -119,6 +132,7 @@ class Forklift:
 								print "FOUNDED %d AT %s" % (c, (y,x))
 					else:
 						self.freeFields.add((y,x))
+
 
 	def continueWay(self):
 		if self.way:
@@ -175,12 +189,17 @@ class Forklift:
 
 		# i'm near wanted package
 		elif self.currentTask == NEGOTIATE:
+
 			#### NEGOTIATIONS will be here: ####
 			crane = None
 			####################################
 
 			# this will be changed after implementing negotiations
-			self.wayToCrane = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
+			if crane == None:
+				self.wayToCrane = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
+			else:
+				self.wayToCrane = self.findPath(lambda x: crane.isInArea)
+
 			self.currentTask = GRAB
 
 		# i have to grab something
