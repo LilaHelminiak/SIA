@@ -160,11 +160,21 @@ class Display:
 			self.windowSurface.blit(crateText, crateTextRect)
 
 
+	def printTextColumns(self, columns, infoRect):
+		for i in xrange(len(columns)):
+			col = columns[i]
+			for j in xrange(len(col)):
+				text = self.basicFont.render(col[j], True, Display.BLACK, Display.WHITE)
+				textRect = text.get_rect()
+				textRect.left = infoRect.left + 10 + i * 300
+				textRect.top = infoRect.top + 30 + j * 50
+				self.windowSurface.blit(text, textRect)		
+
+
 	def drawInformationWindow(self, map):
 		if self.showingInfoForObject == None:
 			return
 		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 8, self.height / 8, 6 * self.width / 8, 6 * self.height / 8))
-		info = "FIELD"
 		if self.showingInfoForObject == map.ship:
 			info = "SHIP"
 			labels = ["CRATE ID", "REQUESTED", "DELIVERED", "WAITED", "CRANE ID"]
@@ -191,43 +201,40 @@ class Display:
 		elif not isinstance(self.showingInfoForObject, Forklift) and self.showingInfoForObject.type == Field.CRANE_TYPE:
 			info = "CRANE"
 			labels = ["ID", "HELD CRATE", "AVERAGE TIME", "# OF CRATES PASSED", "ARM MOVEMENT TOTAL", "HORIZONTAL HOOK MOV. TOTAL", "VERTICAL HOOK MOV. TOTAL"]
-			for i in xrange(len(labels)):
-				text = self.basicFont.render(labels[i], True, Display.BLACK, Display.WHITE)
-				textRect = text.get_rect()
-				textRect.left = infoRect.left + 10
-				textRect.top = infoRect.top + 30 + i * 50
-				self.windowSurface.blit(text, textRect)
 			crane = self.showingInfoForObject.getCrane()
 			values = [str(crane.id), "-", "-", str(crane.passedPackages), str(crane.armMoveTotal * 180 / pi), str(crane.hookMoveHorTotal), str(crane.hookMoveVerTotal)]
 			if crane.crate != None:
 				values[1] = self.crateIdToString(crane.crate.id)
 			if crane.averageTime != 0:
 				values[2] = "%.2f" % crane.averageTime
-			for j in xrange(len(values)):
-				text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
-				textRect = text.get_rect()
-				textRect.left = infoRect.left + 10 + 300
-				textRect.top = infoRect.top + 30 + j * 50
-				self.windowSurface.blit(text, textRect)
+			self.printTextColumns([labels, values], infoRect)
 		elif isinstance(self.showingInfoForObject, Forklift):
 			forklift = self.showingInfoForObject
 			info = "FORKLIFT"
 			labels = ["ID", "HELD CRATE", "MOVEMENT TOTAL", "TURN TOTAL"]
-			for i in xrange(len(labels)):
-				text = self.basicFont.render(labels[i], True, Display.BLACK, Display.WHITE)
-				textRect = text.get_rect()
-				textRect.left = infoRect.left + 10
-				textRect.top = infoRect.top + 30 + i * 50
-				self.windowSurface.blit(text, textRect)
 			values = [str(forklift.id), "-", str(forklift.movementTotal), str(forklift.turnTotal * 180 / pi)]
 			if forklift.crate != None:
 				values[1] = self.crateIdToString(forklift.crate.id)
-			for j in xrange(len(values)):
-				text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
-				textRect = text.get_rect()
-				textRect.left = infoRect.left + 10 + 300
-				textRect.top = infoRect.top + 30 + j * 50
-				self.windowSurface.blit(text, textRect)
+			self.printTextColumns([labels, values], infoRect)
+		else:
+			field = self.showingInfoForObject
+			if field.isForkliftPresent() != None:
+				self.showingInfoForObject = None
+				return
+			info = "FIELD"
+			if field.type == Field.STORAGE_TYPE:
+				info += " - STORAGE"
+			elif field.type == Field.ROAD_TYPE:
+				info += " - ROAD"
+			elif field.type == Field.SHIP_TYPE:
+				info += " - SHIP"
+			labels = ["", "1ST CRATE", "2ND CRATE", "3RD CRATE", "4TH CRATE"]
+			values = ["ID      WEIGHT", "---       -",  "---       -",  "---       -",  "---       -"]
+			k = 4
+			for crate in field.objectsList:
+				values[k] = self.crateIdToString(crate.id) + "       " + str(crate.weight)
+				k -= 1
+			self.printTextColumns([labels, values], infoRect)
 		text = self.basicFont.render(info, True, Display.BLACK, Display.WHITE)
 		textRect = text.get_rect()
 		textRect.centerx = infoRect.centerx
@@ -278,9 +285,9 @@ class Display:
 
 	def startShowingInformationWindow(self, map, position):
 		(row, col) = position
-		if col in (map.colNum - 1, map.colNum) and row < map.rowNum:
+		if col == map.colNum and row in range(map.ship.topRow, map.ship.bottomRow + 1):
 			self.showingInfoForObject = map.ship
-		elif map[position].isForkliftPresent() != None:
+		elif map.inMapBounds(position) and map[position].isForkliftPresent() != None:
 			self.showingInfoForObject = map[position].isForkliftPresent()
 		elif map.inMapBounds(position):
 			self.showingInfoForObject = map[position]
