@@ -262,7 +262,7 @@ class Crane:
 	def stopMeasureTime(self, containerId, stop):
 		start = self.inWay[containerId]
 		measure = stop - start
-		self.averageTime = self.averageTime * self.passedPackages + measure / (self.passedPackages+1)
+		self.averageTime = (self.averageTime * self.passedPackages + measure) / (self.passedPackages+1)
 		self.passedPackages += 1
 		del (self.inWay[containerId])
 		print "%d my time: %f" % (self.id,self.averageTime)
@@ -421,7 +421,7 @@ class Crane:
 				pkg = self.getPackageToDeliver()
 				if pkg:
 					pkg_pos = self.onMyArea[pkg]
-					tasks = [(TAKE_OFF, [pkg_pos]), (PUT_SMWHR, [])] * self.getPackageLevel(pkg)
+					tasks = [(MEASURE_TIME, [pkg, self.map.ship])] + [(TAKE_OFF, [pkg_pos]), (PUT_SMWHR, [])] * self.getPackageLevel(pkg)
 					if self.directToShip:
 						tasks.append((TAKE_OFF, [pkg_pos]))
 						tasks.append((LOAD_SHIP, []))

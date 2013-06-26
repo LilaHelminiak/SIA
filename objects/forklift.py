@@ -190,7 +190,7 @@ class Forklift:
 			
 		elif self.toVisit:
 			pos = self.findNearestUnvisitedField()
-			self.way = self.findPath(lambda x: pos == x)
+			self.way = self.findPath(lambda x: x in self.toVisit)
 
 		else:
 			fields = [self.founded[w] for w in self.wanted if w in self.founded and self.map[self.founded[w]].type == Field.ROAD_TYPE]
