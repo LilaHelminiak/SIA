@@ -6,7 +6,7 @@ from math import pi
 from message import Message
 from field import Field
 
-(EXPLORE) = range(300, 301)
+(EXPLORE, GRAB, TO_CRANE) = range(300, 303)
 
 class Forklift:
 	def __init__(self, id, pos, map):
@@ -70,12 +70,16 @@ class Forklift:
 		sleep(1)
 		y=self.position[0] + self.dir[0]
 		x=self.position[1] + self.dir[1]
-		self.crate = self.map[y,x].discardCrateFromTop()
+		self.crate = self.map[y,x].removeCrateFromTop()
+		if not self.map[y,x].getAllCratesIds:
+			self.freeFields.add((y,x))
 		
 	def drop(self):
 		sleep(1)
 		y=self.position[0] + self.dir[0]
+		x=self.position[1] + self.dir[1]
 		self.map[y,x].putCrateOnTop(self.crate)
+		self.freeFields.discard((y,x))
 		self.crate = None
 	
 	def addMessage(self, msg):
@@ -84,7 +88,6 @@ class Forklift:
 	def readMessage(self, msg):
 		if msg.type == Message.SEARCH_PACKAGE:
 			self.wanted.update(msg.data)
-			print "got message: ship needs %s \n" % (self.wanted)
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
@@ -96,11 +99,17 @@ class Forklift:
 		for y in range(self.position[0]-a, self.position[0]+a+1):
 			for x in range(self.position[1]-a, self.position[1]+a+1):
 				self.toVisit.discard((y,x))
+
+				if (y,x) == self.position:
+					continue
+				
 				if self.map.inMapBounds((y,x)) and self.map.fieldType(y,x) == Field.ROAD_TYPE:
 					crates = self.map[y,x].getAllCratesIds()
 					if crates:
 						for c in crates:
-							self.founded[c] = (y,x)
+							if c not in self.founded:
+								self.founded[c] = (y,x)
+								print "FOUNDED %d AT %s" % (c, (y,x))
 					else:
 						self.freeFields.add((y,x))
 
@@ -134,19 +143,25 @@ class Forklift:
 		return nearest
 
 	
-	def findPath(self, pos): # bfs
+	def findPath(self, goal):
 		v = dict()
 		q = deque([self.position])
 		
-		while q:
+		pos = None
+		
+		while q and not pos:
 			c = q.popleft()
-			n = [x for x in self.map.edge[c] if (x == pos or x in self.freeFields) and x not in v]
-			
-			for x in n:
-				v[x] = c
-				if x == pos: break
-			
-			q.extend(n)
+
+			for x in [(c[0]+a[0], c[1]+a[1]) for a in [(0,1), (1,0), (0,-1), (-1,0)]]:
+				if goal(x):
+					v[x] = c
+					pos = x
+				elif x not in v and x in self.freeFields:
+					v[x] = c
+					q.append(x)
+
+		if pos == None:
+			return None
 		
 		q.clear()
 		while pos != self.position:
@@ -156,20 +171,36 @@ class Forklift:
 		return q
 
 	def doNothing(self):
-		time.sleep(0.2)
+		sleep(0.2)
 	
 
 	def doWork(self):
-		if len(self.way) > 1:
+		if self.way:
 			self.continueWay()
-		elif self.currentTask == EXPLORE:
-			if self.toVisit:
-				pos = self.findNearestUnvisitedField()
-				print ">>>POS: ", pos
-				self.way = self.findPath(pos)
+
+		elif self.currentTask == GRAB:
+			self.grab()
+			self.currentTask = TO_CRANE
+			self.way = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
+
+		elif self.currentTask == TO_CRANE:
+			self.wanted.discard(self.crate.id)
+			self.drop()
+			self.currentTask = EXPLORE
+			
+		elif self.toVisit:
+			pos = self.findNearestUnvisitedField()
+			self.way = self.findPath(lambda x: pos == x)
 
 		else:
-			self.doNothing()
+			fields = [self.founded[w] for w in self.wanted if w in self.founded and self.map[self.founded[w]].type == Field.ROAD_TYPE]
+			self.way = self.findPath(lambda x: x in fields)
+			self.currentTask = GRAB
+			print "WAY 42:", self.way
+
+			if not self.way:
+				self.doNothing()
+				print "BORING!", self.wanted, self.founded
 
 
 	def mainLoop(self):
