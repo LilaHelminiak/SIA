@@ -17,6 +17,7 @@ class Display:
 	CRANE_BODY_COLOUR = (100, 100, 100)
 	FORKLIFT_BODY_COLOUR = (70, 170, 170)
 	ROAD_COLOUR = (210, 210, 210)
+	HATCH_COLOUR = (150, 150, 150)
 
 	
 	def __init__(self, width, height, fieldSize, fontSize):
@@ -54,6 +55,27 @@ class Display:
 			return "0" + str(x)
 		else:
 			return str(x)
+
+
+	def drawBridgeCrane(self, map):
+		(row, col) = (map.ship.bridgeCraneRow, map.colNum - 1)
+		(up, down) = (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[0] + self.rowsPerScreen - 1)
+		(left, right) = (self.upperLeftFieldCoors[1], self.upperLeftFieldCoors[1] + self.colsPerScreen - 1)
+		if row >= up - 1 and row <= down + 1 and col >= left - 2 and col <= right + 2:
+			(row, col) = (row - up, col - left)
+			y = int(int(row) * self.fieldSize + self.fieldSize / 2 + (row - int(row)) * self.fieldSize)
+			x = int((col + 1) * self.fieldSize)
+			bcRect = pygame.draw.circle(self.windowSurface, Display.RED, (x, y), self.fieldSize / 4, 0)
+
+			if map.ship.bridgeCraneCrate == None:
+				heldCrateId = "---"
+			else:
+				heldCrateId = self.crateIdToString(map.ship.bridgeCraneCrate.id)
+			bcHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE)
+			bcHeldCrateIdRect = bcHeldCrateId.get_rect()
+			bcHeldCrateIdRect.centerx = x
+			bcHeldCrateIdRect.centery = y
+			self.windowSurface.blit(bcHeldCrateId, bcHeldCrateIdRect)
 
 
 	def drawCraneBody(self, crane, rect):
@@ -268,9 +290,15 @@ class Display:
 
 			if upperLeftCol + self.colsPerScreen >= map.colNum + 1 and map.fieldType(row, map.colNum - 1) == Field.SHIP_TYPE: # draw the ship's back column
 				pygame.draw.rect(self.windowSurface, Display.BROWN, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize))
+				pygame.draw.line(self.windowSurface, Display.BLACK, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize), (colDisplay * self.fieldSize, (rowDisplay + 1) * self.fieldSize), 8)
+				if row == map.ship.hatchRow:
+					pygame.draw.rect(self.windowSurface, Display.HATCH_COLOUR, (colDisplay * self.fieldSize + self.fieldSize / 4, rowDisplay * self.fieldSize + self.fieldSize / 4, self.fieldSize / 2, self.fieldSize / 2))
+					pygame.draw.line(self.windowSurface, Display.BLACK, (int(colDisplay * self.fieldSize + self.fieldSize / 4), int(rowDisplay * self.fieldSize + self.fieldSize / 4)), (int(colDisplay * self.fieldSize + 3 * self.fieldSize / 4), int(rowDisplay * self.fieldSize + 3 * self.fieldSize / 4)), 2)
+					pygame.draw.line(self.windowSurface, Display.BLACK, (int(colDisplay * self.fieldSize + self.fieldSize / 4), int(rowDisplay * self.fieldSize + 3 * self.fieldSize / 4)), (int(colDisplay * self.fieldSize + 3 * self.fieldSize / 4), int(rowDisplay * self.fieldSize + self.fieldSize / 4)), 2)
 
 			rowDisplay += 1
 
+		self.drawBridgeCrane(map)
 		self.drawForklifts(map)
 		self.drawCranesArms(map)
 		self.drawHUD(map)
