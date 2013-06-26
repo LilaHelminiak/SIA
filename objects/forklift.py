@@ -4,6 +4,9 @@ from time import sleep, time
 from collections import deque
 from math import pi
 from message import Message
+from field import Field
+
+(EXPLORE) = range(300, 301)
 
 class Forklift:
 	def __init__(self, id, pos, map):
@@ -18,9 +21,16 @@ class Forklift:
 		self.wanted = set() #all packages wanted by ship
 		self.myIsland = id
 
+		self.toVisit = set() # all unvisited island fields
+		self.founded = {} # founded packages on current island
+		self.freeFields = set() # fields of island free of packages stacks
+		self.currentTask = EXPLORE # current forklift task
+
 		self.thread = self.createThread()
 		self.running = True
 		self.thread.start()
+
+		self.map[self.position].objectsList = [self]
 
 	def fixPos(self):
 		self.position = (int(round(self.position[0])), int(round(self.position[1])))
@@ -60,7 +70,7 @@ class Forklift:
 		sleep(1)
 		y=self.position[0] + self.dir[0]
 		x=self.position[1] + self.dir[1]
-		self.crate = self.map[y,x].removeCrateFromTop()
+		self.crate = self.map[y,x].discardCrateFromTop()
 		
 	def drop(self):
 		sleep(1)
@@ -82,33 +92,91 @@ class Forklift:
 			left -= 1
 
 	def examineSurroundings(self):
-		pass#self.way = self.map.island[self.myIsland]
-				
-		
+		a = 1
+		for y in range(self.position[0]-a, self.position[0]+a+1):
+			for x in range(self.position[1]-a, self.position[1]+a+1):
+				self.toVisit.discard((y,x))
+				if self.map.inMapBounds((y,x)) and self.map.fieldType(y,x) == Field.ROAD_TYPE:
+					crates = self.map[y,x].getAllCratesIds()
+					if crates:
+						for c in crates:
+							self.founded[c] = (y,x)
+					else:
+						self.freeFields.add((y,x))
 
 	def continueWay(self):
 		if self.way:
 			nxt = self.way[0]
 			nxt = (nxt[0] - int(self.position[0]), nxt[1] - int(self.position[1]))
 			if nxt == self.dir:
-				self.forward()
 				self.way.popleft()
+				if self.way:
+					self.forward()
 			else:
 				cp = self.dir[0]*nxt[1] - self.dir[1]*nxt[0]
-				if cp == 1:
-					self.turnLeft()
-				else:
-					self.turnRight()
+				if len(self.way) > 1 or self.currentTask != EXPLORE:
+					if cp == 1:
+						self.turnLeft()
+					else:
+						self.turnRight()
 			print("Forklift", self.id, "-", self.position, self.dir, 180.0*(self.angle/pi))
 
+	def findNearestUnvisitedField(self):
+		nearest = None
+		minDist = 1000000000
+
+		for pos in self.toVisit:
+			dist = (self.position[0]-pos[0])**2 + (self.position[1] - pos[1])**2
+			if dist < minDist:
+				nearest = pos
+				minDist = dist
+
+		return nearest
+
+	
+	def findPath(self, pos): # bfs
+		v = dict()
+		q = deque([self.position])
+		
+		while q:
+			c = q.popleft()
+			n = [x for x in self.map.edge[c] if (x == pos or x in self.freeFields) and x not in v]
+			
+			for x in n:
+				v[x] = c
+				if x == pos: break
+			
+			q.extend(n)
+		
+		q.clear()
+		while pos != self.position:
+			q.appendleft(pos)
+			pos = v[pos]
+		
+		return q
+
+	def doNothing(self):
+		time.sleep(0.2)
+	
+
 	def doWork(self):
-		self.continueWay()
+		if len(self.way) > 1:
+			self.continueWay()
+		elif self.currentTask == EXPLORE:
+			if self.toVisit:
+				pos = self.findNearestUnvisitedField()
+				print ">>>POS: ", pos
+				self.way = self.findPath(pos)
+
+		else:
+			self.doNothing()
+
 
 	def mainLoop(self):
-		# just for test:
-		#self.position=(0,2)
-		#self.way = deque([(0,3), (0,4), (0,5), (0,4)] * 2 + [(1,4), (1,5), (0,5)])
-		self.way = deque([(0,4), (0,3), (0,2), (0,3)] * 2 + [(1,4), (1,5), (0,5)])
+		print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MY ID: %s, MY POS: %s' % (self.id, self.position)
+
+		self.toVisit = set(self.map.island[self.myIsland-1])
+		self.toVisit.discard(self.position)
 
 		while self.running:
 			while self.running and self.map.pause:

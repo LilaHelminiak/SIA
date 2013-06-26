@@ -1,10 +1,5 @@
 mapHeight mapWidth
 
-cratesNumber
-crate_1_id crate_1_weight crate_1_row crate_1_column
-...
-crate_n_id crate_n_weight crate_n_row crate_n_column
-
 cranesNumber
 crane_1_id crane_1_row crane_1_column crane_1_range crane_1_reach crane_1_height
 ...
@@ -14,6 +9,11 @@ forkliftsNumber
 forklift_1_id forklift_1_row forklift_1_column
 ...
 forklift_n_id forklift_n_row forklift_n_column
+
+cratesNumber
+crate_1_id crate_1_weight crate_1_row crate_1_column
+...
+crate_n_id crate_n_weight crate_n_row crate_n_column
 
 shipFrontCoor shipBackCoor cratesPerMessage messageDelayTime
 needed_crate_1_id ... needed_crate_n_id
