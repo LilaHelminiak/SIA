@@ -20,6 +20,8 @@ class Forklift:
 		self.way = deque()
 		self.wanted = set() #all packages wanted by ship
 		self.myIsland = id
+		self.movementTotal = 0
+		self.turnTotal = 0
 
 		self.toVisit = set() # all unvisited island fields
 		self.founded = {} # founded packages on current island
@@ -49,11 +51,13 @@ class Forklift:
 			self.position = (y,x)
 			sleep(0.02)
 		self.fixPos()
+		self.movementTotal += 1
 
 	def turnLeft(self):
 		ANG = 0.02
 		for i in range(0, int(pi/2 / ANG)):
 			self.angle -= ANG
+			self.turnTotal += ANG
 			sleep(0.02)
 		self.dir = (-self.dir[1], self.dir[0])
 		self.fixAngle()
@@ -62,6 +66,7 @@ class Forklift:
 		ANG = 0.02
 		for i in range(0, int(pi/2 / ANG)):
 			self.angle += ANG
+			self.turnTotal += ANG
 			sleep(0.02)
 		self.dir = (self.dir[1], -self.dir[0])
 		self.fixAngle()

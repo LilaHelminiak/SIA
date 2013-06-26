@@ -3,6 +3,7 @@ from math import radians, sin, cos, sqrt, floor, pi
 import pygame
 from pygame.locals import *
 from field import *
+from forklift import *
 
 
 class Display:
@@ -187,7 +188,7 @@ class Display:
 					textRect.left = infoRect.left + 10 + j * 140
 					textRect.top = infoRect.top + 30 + (i + 1) * 30
 					self.windowSurface.blit(text, textRect)
-		elif self.showingInfoForObject.type == Field.CRANE_TYPE:
+		elif not isinstance(self.showingInfoForObject, Forklift) and self.showingInfoForObject.type == Field.CRANE_TYPE:
 			info = "CRANE"
 			labels = ["ID", "HELD CRATE", "AVERAGE TIME", "# OF CRATES PASSED", "ARM MOVEMENT TOTAL", "HORIZONTAL HOOK MOV. TOTAL", "VERTICAL HOOK MOV. TOTAL"]
 			for i in xrange(len(labels)):
@@ -202,6 +203,25 @@ class Display:
 				values[1] = self.crateIdToString(crane.crate.id)
 			if crane.averageTime != 0:
 				values[2] = "%.2f" % crane.averageTime
+			for j in xrange(len(values)):
+				text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
+				textRect = text.get_rect()
+				textRect.left = infoRect.left + 10 + 300
+				textRect.top = infoRect.top + 30 + j * 50
+				self.windowSurface.blit(text, textRect)
+		elif isinstance(self.showingInfoForObject, Forklift):
+			forklift = self.showingInfoForObject
+			info = "FORKLIFT"
+			labels = ["ID", "HELD CRATE", "MOVEMENT TOTAL", "TURN TOTAL"]
+			for i in xrange(len(labels)):
+				text = self.basicFont.render(labels[i], True, Display.BLACK, Display.WHITE)
+				textRect = text.get_rect()
+				textRect.left = infoRect.left + 10
+				textRect.top = infoRect.top + 30 + i * 50
+				self.windowSurface.blit(text, textRect)
+			values = [str(forklift.id), "-", str(forklift.movementTotal), str(forklift.turnTotal * 180 / pi)]
+			if forklift.crate != None:
+				values[1] = self.crateIdToString(forklift.crate.id)
 			for j in xrange(len(values)):
 				text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
 				textRect = text.get_rect()
@@ -260,8 +280,10 @@ class Display:
 		(row, col) = position
 		if col in (map.colNum - 1, map.colNum) and row < map.rowNum:
 			self.showingInfoForObject = map.ship
+		elif map[position].isForkliftPresent() != None:
+			self.showingInfoForObject = map[position].isForkliftPresent()
 		elif map.inMapBounds(position):
-			self.showingInfoForObject = map.field(row, col)
+			self.showingInfoForObject = map[position]
 
 
 	def drawMap(self, map):
