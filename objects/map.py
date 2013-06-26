@@ -18,10 +18,6 @@ class Map:
 		self.rowNum = t[0]
 		self.colNum = t[1]
 		self.map = [[Field(Field.ROAD_TYPE, []) for col in xrange(self.colNum)] for row in xrange(self.rowNum)]
-		for y in xrange(self.rowNum):
-			for x in xrange(self.colNum-1, self.colNum):
-				self.map[y][x] = Field(Field.SHIP_TYPE, [])
-
 		
 		cranesNum = int(f.readline()) # cranesNumber
 		self.cranesList = []
@@ -69,12 +65,6 @@ class Map:
 						for j in self.edge[el]:
 							q.put(j)
 				self.island.append(l)
-					
-		cratesNum = int(f.readline()) # cratesNumber
-		for _ in xrange(cratesNum):
-			t = [int(x) for x in f.readline().split()] # crate_id crate_weight crate_row crate_column
-			self.map[t[2]][t[3]].putCrateOnTop(Crate(t[0], t[1]))
-		f.readline() # empty line		
 
 		for crane1 in self.cranesList:
 			for crane2 in self.cranesList:
@@ -83,15 +73,19 @@ class Map:
 				if self.commonArea(crane1, crane2) != None:
 					crane1.addNeighbours([crane2])
 
-		forkliftsNum = len(self.island) - 1 #int(f.readline()) # forkliftsNumber
-		self.forkliftsList = [Forklift(1, self.island[0][0], self)] #self.forkliftsList = []
-		#print '@@@' + str(forkliftsNum)
-		#for i in xrange(forkliftsNum):
-			#t = [int(x) for x in f.readline().split()] # forklift_id forklift_row forklift_column
-		#	forklift = Forklift(i+1, (self.island[i][0][0], self.island[i][0][1]), self) #Forklift(t[0], (t[1], t[2]), self)
-		#	self.forkliftsList.append(forklift)
-			#self.map[t[1]][t[2]] = Field(Field.STORAGE_TYPE, [forklift])
-		#f.readline() # empty line
+		forkliftsNum = int(f.readline()) # forkliftsNumber
+		self.forkliftsList = []
+		for i in xrange(forkliftsNum):
+			t = [int(x) for x in f.readline().split()] # forklift_id forklift_row forklift_column
+			forklift = Forklift(t[0], (t[1], t[2]), self)
+			self.forkliftsList.append(forklift)
+		f.readline() # empty line
+
+		cratesNum = int(f.readline()) # cratesNumber
+		for _ in xrange(cratesNum):
+			t = [int(x) for x in f.readline().split()] # crate_id crate_weight crate_row crate_column
+			self.map[t[2]][t[3]].putCrateOnTop(Crate(t[0], t[1]))
+		f.readline() # empty line		
 
 		t = [int(x) for x in f.readline().split()] # shipFrontCoor shipBackCoor cratesPerMessage messageDelayTime
 		neededCrates = [int(x) for x in f.readline().split()] # needed_crate_1_id ... needed_crate_n_id
