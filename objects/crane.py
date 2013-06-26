@@ -19,6 +19,9 @@ class Crane:
 		self.reach = reach
 		self.height = height
 		self.angle = 0 # in radians, clockwise
+		self.armMoveTotal = 0
+		self.hookMoveHorTotal = 0
+		self.hookMoveVerTotal = 0
 		self.hookDistance = 1
 		self.hookHeight   = height
 		self.neighbours   = []
@@ -53,13 +56,17 @@ class Crane:
 	# atomic functions that crane can do at once
 	def moveArmInst(self, alfa, dist):
 		self.angle += alfa
+		self.armMoveTotal += abs(alfa)
 		self.hookDistance += dist
+		self.hookMoveHorTotal += abs(dist)
 
 	def hookDownInst(self, dist):
 		self.hookHeight -= dist
+		self.hookMoveVerTotal += dist
 
 	def hookUpInst(self, dist):
 		self.hookHeight += dist
+		self.hookMoveVerTotal += dist
 	
 	def grabInst(self):
 		self.hookHeight = abs(round(self.hookHeight))

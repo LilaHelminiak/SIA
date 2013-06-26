@@ -1,5 +1,5 @@
 import sys
-from math import radians, sin, cos, sqrt, floor
+from math import radians, sin, cos, sqrt, floor, pi
 import pygame
 from pygame.locals import *
 from field import *
@@ -189,24 +189,24 @@ class Display:
 					self.windowSurface.blit(text, textRect)
 		elif self.showingInfoForObject.type == Field.CRANE_TYPE:
 			info = "CRANE"
-			labels = ["ID", "CRATE", "AVERAGE TIME", "# PASSED"]
-			for i in xrange(4):
+			labels = ["ID", "HELD CRATE", "AVERAGE TIME", "# OF CRATES PASSED", "ARM MOVEMENT TOTAL", "HORIZONTAL HOOK MOV. TOTAL", "VERTICAL HOOK MOV. TOTAL"]
+			for i in xrange(len(labels)):
 				text = self.basicFont.render(labels[i], True, Display.BLACK, Display.WHITE)
 				textRect = text.get_rect()
-				textRect.left = infoRect.left + 10 + i * 140
-				textRect.top = infoRect.top + 30
+				textRect.left = infoRect.left + 10
+				textRect.top = infoRect.top + 30 + i * 50
 				self.windowSurface.blit(text, textRect)
 			crane = self.showingInfoForObject.getCrane()
-			values = [str(crane.id), "-", "-", str(crane.passedPackages)]
+			values = [str(crane.id), "-", "-", str(crane.passedPackages), str(crane.armMoveTotal * 180 / pi), str(crane.hookMoveHorTotal), str(crane.hookMoveVerTotal)]
 			if crane.crate != None:
 				values[1] = self.crateIdToString(crane.crate.id)
 			if crane.averageTime != 0:
 				values[2] = "%.2f" % crane.averageTime
-			for j in xrange(4):
+			for j in xrange(len(values)):
 				text = self.basicFont.render(values[j], True, Display.BLACK, Display.WHITE)
 				textRect = text.get_rect()
-				textRect.left = infoRect.left + 10 + j * 140
-				textRect.top = infoRect.top + 30 + 30
+				textRect.left = infoRect.left + 10 + 300
+				textRect.top = infoRect.top + 30 + j * 50
 				self.windowSurface.blit(text, textRect)
 		text = self.basicFont.render(info, True, Display.BLACK, Display.WHITE)
 		textRect = text.get_rect()
