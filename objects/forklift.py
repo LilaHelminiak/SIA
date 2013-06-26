@@ -17,11 +17,13 @@ class Forklift:
 		self.crate = None
 		self.map = map
 		self.messages = Queue()
+		self.negotiate = Queue()
 		self.way = deque()
 		self.wanted = set() #all packages wanted by ship
 		self.myIsland = id
 		self.movementTotal = 0
 		self.turnTotal = 0
+		self.dropOn = None
 
 		self.toVisit = set() # all unvisited island fields
 		self.founded = {} # founded packages on current island
@@ -101,6 +103,12 @@ class Forklift:
 		while (left > 0 and not self.messages.empty()):
 			self.readMessage(self.messages.get())
 			left -= 1
+			
+	def sendMessageInst(self, receiver, message):
+		receiver.addMessage(message)
+		
+	def addNegotiate(self, msg):
+		self.negotiate.put(msg)
 
 	def addNewNeighbours(self, pos):
 		for p in [(pos[0]+a[0], pos[1]+a[1]) for a in [(0,1), (1,0), (0,-1), (-1,0)]]:
@@ -189,9 +197,19 @@ class Forklift:
 
 		# i'm near wanted package
 		elif self.currentTask == NEGOTIATE:
-
+			answer = []
 			#### NEGOTIATIONS will be here: ####
-			crane = None
+			msg = Message(self, Message.TELL_DISTANCE, [])
+			for crane in self.neighbours:
+						self.sendMessageInst(crane, msg)
+						while(self.negotiate.empty()):
+							sleep(0.2)
+							self.readMessages()
+						ans = self.negotiate.get()
+						if ans.type == Message.TELL_DISTANCE:
+							answer.append((ans.sender, ans.data[0]))
+			answer.sort(key=lambda tup: tup[1])			
+			crane = answer[0][0]
 			####################################
 
 			# this will be changed after implementing negotiations
@@ -199,7 +217,8 @@ class Forklift:
 				self.wayToCrane = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
 			else:
 				self.wayToCrane = self.findPath(lambda x: crane.isInArea(x))
-
+			self.dropOn = self.wayToCrane[-1]
+			self.map[self.dropOn].lock.acquire()
 			self.currentTask = GRAB
 
 		# i have to grab something
@@ -224,6 +243,7 @@ class Forklift:
 			self.wanted.discard(self.crate.id)
 			# pass package to crane
 			self.drop()
+			self.map[self.dropOn].lock.release()
 			self.currentTask = EXPLORE
 			
 		# no tasks:
@@ -243,8 +263,6 @@ class Forklift:
 
 
 	def mainLoop(self):
-		print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!MY ID: %s, MY POS: %s' % (self.id, self.position)
-
 		self.toVisit = set(self.map.island[self.myIsland-1])
 		self.toVisit.discard(self.position)
 

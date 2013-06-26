@@ -358,6 +358,10 @@ class Crane:
 				response = Message(self, Message.NEGOTIATE_ANSWER, ["yes"] )
 			msg.sender.addNegotiate(response)
 			
+		elif msg.type == Message.TELL_DISTANCE:
+			response = Message(self, Message.TELL_DISTANCE, [self.hops])
+			msg.sender.addNegotiate(response)
+			
 
 	def readMessages(self, left=5):
 		while (left > 0 and not self.messages.empty()):
