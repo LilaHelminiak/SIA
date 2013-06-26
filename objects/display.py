@@ -196,7 +196,7 @@ class Display:
 	def drawInformationWindow(self, map):
 		if self.showingInfoForObject == None:
 			return
-		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 8, self.height / 8, 6 * self.width / 8, 6 * self.height / 8))
+		infoRect = pygame.draw.rect(self.windowSurface, Display.WHITE, (self.width / 8, self.height / 8, 6 * self.width / 8, 7 * self.height / 8))
 		if self.showingInfoForObject == map.ship:
 			info = "SHIP"
 			labels = ["CRATE ID", "REQUESTED", "DELIVERED", "WAITED", "CRANE ID"]
