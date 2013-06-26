@@ -13,6 +13,9 @@ class Display:
 	GREEN = (0, 255, 0)
 	BLUE = (0, 0, 255)
 	BROWN = (205, 127, 50)
+	CRANE_BODY_COLOUR = (100, 100, 100)
+	FORKLIFT_BODY_COLOUR = (70, 170, 170)
+	ROAD_COLOUR = (210, 210, 210)
 
 	
 	def __init__(self, width, height, fieldSize, fontSize):
@@ -53,7 +56,7 @@ class Display:
 
 
 	def drawCraneBody(self, crane, rect):
-		craneRect = pygame.draw.circle(self.windowSurface, (100, 100, 100), (rect.centerx, rect.centery), self.fieldSize / 2, 0)
+		craneRect = pygame.draw.circle(self.windowSurface, Display.CRANE_BODY_COLOUR, (rect.centerx, rect.centery), self.fieldSize / 2, 0)
 					
 		craneIdText = self.basicFont.render(str(crane.id), True, Display.WHITE)
 		craneIdTextRect = craneIdText.get_rect()
@@ -104,13 +107,12 @@ class Display:
 				x = int(int(col) * self.fieldSize + self.fieldSize / 2 + (col - int(col)) * self.fieldSize)
 				armLen = 3 * self.fieldSize / 8
 				pygame.draw.line(self.windowSurface, Display.BLACK, (x, y), (x + cos(forklift.angle) * armLen, y + sin(forklift.angle) * armLen), 4)
-				(y,x) = (int(y), int(x))
-				forkliftRect = pygame.draw.circle(self.windowSurface, (70, 170, 170), (x, y), self.fieldSize / 4, 0)
+				forkliftRect = pygame.draw.circle(self.windowSurface, Display.FORKLIFT_BODY_COLOUR, (x, y), self.fieldSize / 4, 0)
 
 				forkliftIdText = self.basicFont.render(str(forklift.id), True, Display.WHITE)
 				forkliftIdTextRect = forkliftIdText.get_rect()
-				forkliftIdTextRect.centerx = forkliftRect.centerx
-				forkliftIdTextRect.centery = forkliftRect.centery - self.fieldSize / 8
+				forkliftIdTextRect.centerx = x
+				forkliftIdTextRect.centery = y - self.fieldSize / 8
 				self.windowSurface.blit(forkliftIdText, forkliftIdTextRect)
 
 				if forklift.crate == None:
@@ -119,8 +121,8 @@ class Display:
 					heldCrateId = self.crateIdToString(forklift.crate.id)
 				forkliftHeldCrateId = self.basicFont.render(heldCrateId, True, Display.WHITE)
 				forkliftHeldCrateIdRect = forkliftHeldCrateId.get_rect()
-				forkliftHeldCrateIdRect.centerx = forkliftRect.centerx
-				forkliftHeldCrateIdRect.centery = forkliftRect.centery + self.fieldSize / 8
+				forkliftHeldCrateIdRect.centerx = x
+				forkliftHeldCrateIdRect.centery = y + self.fieldSize / 8
 				self.windowSurface.blit(forkliftHeldCrateId, forkliftHeldCrateIdRect)
 
 
@@ -215,14 +217,13 @@ class Display:
 
 	def drawStuff(self, map):
 		(upperLeftRow, upperLeftCol) = self.upperLeftFieldCoors
-		cranesList = []
 		rowDisplay = 0
 		for row in xrange(upperLeftRow, min(map.rowNum, upperLeftRow + self.rowsPerScreen)):
 			colDisplay = 0
 			for col in xrange(upperLeftCol, min(map.colNum, upperLeftCol + self.colsPerScreen)):
 
 				if map.fieldType(row, col) == Field.ROAD_TYPE:
-					pygame.draw.rect(self.windowSurface, (210, 210, 210), (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize)) # Road field has a different colour
+					pygame.draw.rect(self.windowSurface, Display.ROAD_COLOUR, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize)) # Road field has a different colour
 
 				if map.fieldType(row, col) == Field.SHIP_TYPE:
 					pygame.draw.rect(self.windowSurface, Display.BROWN, (colDisplay * self.fieldSize, rowDisplay * self.fieldSize, self.fieldSize, self.fieldSize)) # draw the ship's front column
@@ -231,9 +232,7 @@ class Display:
 				colDisplay += 1
 
 				if map.fieldType(row, col) == Field.CRANE_TYPE:
-					crane = map.field(row, col).getCrane()
-					craneRect = self.drawCraneBody(crane, rect)
-					cranesList.append((crane, craneRect))
+					self.drawCraneBody(map[(row, col)].getCrane(), rect)
 					continue
 				
 				if map.field(row, col).isForkliftPresent() or map.field(row, col).countCrates() == 0:
