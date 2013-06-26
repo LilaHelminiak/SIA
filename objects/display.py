@@ -73,14 +73,24 @@ class Display:
 		return craneRect
 
 
-	def drawCranesArms(self, cranesList):
-		for i in xrange(len(cranesList)):
-			(crane, craneRect) = (cranesList[i][0], cranesList[i][1])
+	def drawCranesArms(self, map):
+		for crane in map.cranesList:
+			(row, col) = crane.position
+			(up, down) = (self.upperLeftFieldCoors[0], self.upperLeftFieldCoors[0] + self.rowsPerScreen - 1)
+			(left, right) = (self.upperLeftFieldCoors[1], self.upperLeftFieldCoors[1] + self.colsPerScreen - 1)
+			(row, col) = (row - up, col - left)
 			armLen = sqrt(2) * crane.reach * self.fieldSize
-			pygame.draw.line(self.windowSurface, Display.BLACK, (craneRect.centerx, craneRect.centery), (craneRect.centerx + cos(crane.angle) * armLen, craneRect.centery + sin(crane.angle) * armLen), 3)
+			y1 = int(row * self.fieldSize + self.fieldSize / 2)
+			x1 = int(col * self.fieldSize + self.fieldSize / 2)
+			y2 = int(y1 + sin(crane.angle) * armLen)
+			x2 = int(x1 + cos(crane.angle) * armLen)
 
+			if (y1 < 0 and y2 < 0) or (x1 < 0 and x2 < 0) or (y1 > self.height  and y2 > self.height) or (x1 > self.width and x2 > self.width):
+				continue
+
+			pygame.draw.line(self.windowSurface, Display.BLACK, (x1, y1), (x2, y2), 3)
 			hookDist = crane.hookDistance * self.fieldSize
-			pygame.draw.circle(self.windowSurface, Display.BLACK, (int(craneRect.centerx + cos(crane.angle) * hookDist), int(craneRect.centery + sin(crane.angle) * hookDist)), int(max(5, (crane.hookHeight / crane.height) * 10)), 0)
+			pygame.draw.circle(self.windowSurface, Display.BLACK, (int(x1 + cos(crane.angle) * hookDist), int(y1 + sin(crane.angle) * hookDist)), int(max(5, (crane.hookHeight / crane.height) * 10)), 0)
 
 
 	def drawForklifts(self, map):
@@ -236,7 +246,7 @@ class Display:
 			rowDisplay += 1
 
 		self.drawForklifts(map)
-		self.drawCranesArms(cranesList)
+		self.drawCranesArms(map)
 		self.drawHUD(map)
 		self.drawInformationWindow(map)
 
