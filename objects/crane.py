@@ -102,8 +102,8 @@ class Crane:
 	
 	# these functions decompose crane actions to more atomic instructions
 	def moveArmDecompose(self, alfa, dist):
-		aStep, aDir = 0.04, 1 if alfa > 0 else -1
-		dStep, dDir = 0.04, 1 if dist > 0 else -1
+		aStep, aDir = 0.025 / self.reach ** 0.6, 1 if alfa > 0 else -1
+		dStep, dDir = 0.02, 1 if dist > 0 else -1
 		inst = []
 		aL = [aStep] * int(abs(alfa)/aStep) + [abs(alfa) % aStep]
 		dL = [dStep] * int(abs(dist)/dStep) + [abs(dist) % dStep]

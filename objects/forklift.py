@@ -6,7 +6,7 @@ from math import pi
 from message import Message
 from field import Field
 
-(EXPLORE, GRAB, TO_CRANE) = range(300, 303)
+(EXPLORE, GRAB, TO_CRANE, DROP, NEGOTIATE) = range(300, 305)
 
 class Forklift:
 	def __init__(self, id, pos, map):
@@ -27,6 +27,9 @@ class Forklift:
 		self.founded = {} # founded packages on current island
 		self.freeFields = set() # fields of island free of packages stacks
 		self.currentTask = EXPLORE # current forklift task
+		self.neighbours = set()
+
+		self.field = None 
 
 		self.thread = self.createThread()
 		self.running = True
@@ -44,7 +47,7 @@ class Forklift:
 		self.angle = fixedValues[self.dir]
 
 	def forward(self):
-		SPEED = 0.02
+		SPEED = 0.04
 		for i in range(0, int(1.0/SPEED)):
 			y = self.position[0] + self.dir[0] * SPEED
 			x = self.position[1] + self.dir[1] * SPEED
@@ -54,7 +57,7 @@ class Forklift:
 		self.movementTotal += 1
 
 	def turnLeft(self):
-		ANG = 0.02
+		ANG = 0.04
 		for i in range(0, int(pi/2 / ANG)):
 			self.angle -= ANG
 			self.turnTotal += ANG
@@ -63,7 +66,7 @@ class Forklift:
 		self.fixAngle()
 
 	def turnRight(self):
-		ANG = 0.02
+		ANG = 0.04
 		for i in range(0, int(pi/2 / ANG)):
 			self.angle += ANG
 			self.turnTotal += ANG
@@ -99,11 +102,23 @@ class Forklift:
 			self.readMessage(self.messages.get())
 			left -= 1
 
+	def addNewNeighbours(self, pos):
+		for p in [(pos[0]+a[0], pos[1]+a[1]) for a in [(0,1), (1,0), (0,-1), (-1,0)]]:
+			if self.map.inMapBounds(p):
+				for c in self.map.cranesList:
+					if c.isInArea(p):
+						self.neighbours.add(c)
+						print ("FORKLIFT %d: fouded crane %d!!" % (self.id, c.id))
+
+
 	def examineSurroundings(self):
 		a = 1
 		for y in range(self.position[0]-a, self.position[0]+a+1):
 			for x in range(self.position[1]-a, self.position[1]+a+1):
-				self.toVisit.discard((y,x))
+
+				if (y,x) in self.toVisit:
+					self.addNewNeighbours((y,x))
+					self.toVisit.discard((y,x))
 
 				if (y,x) == self.position:
 					continue
@@ -117,6 +132,7 @@ class Forklift:
 								print "FOUNDED %d AT %s" % (c, (y,x))
 					else:
 						self.freeFields.add((y,x))
+
 
 	def continueWay(self):
 		if self.way:
@@ -133,21 +149,8 @@ class Forklift:
 						self.turnLeft()
 					else:
 						self.turnRight()
-			print("Forklift", self.id, "-", self.position, self.dir, 180.0*(self.angle/pi))
+			print("Forklift", self.id, "-", self.position, self.dir, 180.0*(self.angle/pi), self.toVisit)
 
-	def findNearestUnvisitedField(self):
-		nearest = None
-		minDist = 1000000000
-
-		for pos in self.toVisit:
-			dist = (self.position[0]-pos[0])**2 + (self.position[1] - pos[1])**2
-			if dist < minDist:
-				nearest = pos
-				minDist = dist
-
-		return nearest
-
-	
 	def findPath(self, goal):
 		v = dict()
 		q = deque([self.position])
@@ -180,32 +183,63 @@ class Forklift:
 	
 
 	def doWork(self):
+		# i have some way to go
 		if self.way:
 			self.continueWay()
 
+		# i'm near wanted package
+		elif self.currentTask == NEGOTIATE:
+
+			#### NEGOTIATIONS will be here: ####
+			crane = None
+			####################################
+
+			# this will be changed after implementing negotiations
+			if crane == None:
+				self.wayToCrane = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
+			else:
+				self.wayToCrane = self.findPath(lambda x: crane.isInArea(x))
+
+			self.currentTask = GRAB
+
+		# i have to grab something
 		elif self.currentTask == GRAB:
 			self.grab()
-			self.currentTask = TO_CRANE
-			self.way = self.findPath(lambda x: self.map[x] and self.map[x].type == Field.STORAGE_TYPE)
+			if self.crate.id in self.wanted:
+				self.currentTask = TO_CRANE
+				self.way = self.wayToCrane
+			else:
+				self.field = (self.position[0] + self.dir[0], self.position[1] + self.dir[1])
+				self.way = self.findPath(lambda x: x != self.field and self.map.inMapBounds(x) and x not in self.wayToCrane and self.map[x].countCrates() < Field.STACK_MAX_SIZE)
+				self.currentTask = DROP
 
+		elif self.currentTask == DROP:
+			self.drop()
+			self.currentTask = GRAB
+			self.way = self.findPath(lambda x: x == self.field)
+
+
+		# i'm near crane now
 		elif self.currentTask == TO_CRANE:
 			self.wanted.discard(self.crate.id)
+			# pass package to crane
 			self.drop()
 			self.currentTask = EXPLORE
 			
-		elif self.toVisit:
-			pos = self.findNearestUnvisitedField()
+		# no tasks:
+		else:
 			self.way = self.findPath(lambda x: x in self.toVisit)
 
-		else:
-			fields = [self.founded[w] for w in self.wanted if w in self.founded and self.map[self.founded[w]].type == Field.ROAD_TYPE]
-			self.way = self.findPath(lambda x: x in fields)
-			self.currentTask = GRAB
-			print "WAY 42:", self.way
-
-			if not self.way:
-				self.doNothing()
-				print "BORING!", self.wanted, self.founded
+			if self.way:
+				self.currentTask = EXPLORE
+			else:
+				# looking for interested fields on my island
+				fields = [self.founded[w] for w in self.wanted if w in self.founded and self.map[self.founded[w]].type == Field.ROAD_TYPE]
+				self.way = self.findPath(lambda x: x in fields)
+				if self.way:
+					self.currentTask = NEGOTIATE
+				else:
+					self.doNothing()
 
 
 	def mainLoop(self):
