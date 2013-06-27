@@ -377,46 +377,51 @@ class Crane:
 		return self.map.map[y][x].getCratePosition(crateId)
 
 	def getPackageToDeliver(self):
+		def h(pkg):
+			l = self.getPackageLevel(pkg)
+			v = self.calcAngleAndShift(self.onMyArea[pkg], self.angle, self.hookDistance)
+			return abs(v[0]) * 10 + abs(v[1]) + l * 100
+
 		res = None
 		resLvl = 10000
 		negotiateWith = []
-		wanted = list(self.wanted)
+		wanted = [w for w in self.wanted if w in self.onMyArea]
+		wanted.sort(key=lambda p: h(p))
 		isMine=None
 		for pkg in wanted:
 			packageNeighbours = []
-			if pkg in self.onMyArea:
-				pkg_pos = self.onMyArea[pkg]
-				if self.map[pkg_pos].lock.acquire(False):
-					print '++++++++++++++++++++++++++%s want %s and aquires %s' %(self.id, pkg, pkg_pos)
-					isMine = True
-					for c in self.neighbours:
-						if c.isInArea(pkg_pos):
-							packageNeighbours.append(c)
-					msg = Message(self, Message.NEGOTIATE_OWNERSHIP, [pkg, self.averageTime, self.hops]) 
-					for crane in packageNeighbours:
-						self.sendMessageInst(crane, msg)
-						while(self.negotiate.empty()):
-							sleep(0.2)
-							self.readMessages()
-						ans = self.negotiate.get()
-						if ans.type == Message.NEGOTIATE_ANSWER:
-							answer = ans.data[0]
-							if answer == 'yes':
-								isMine = True
-							elif answer == 'no':
-								isMine = False							
-								self.wanted.remove(pkg)
-								self.map[pkg_pos].lock.release()
-								print '---------no---------------%s relises %s and removes %s from wanted. lost to %s' %(self.id, pkg_pos, pkg, crane.id)
-								break
-				else:
-					continue					
-				if isMine:
-					pkgLvl = self.getPackageLevel(pkg)
-					if resLvl > pkgLvl:
-						res = pkg
-						resLvl = pkgLvl
-					break
+			pkg_pos = self.onMyArea[pkg]
+			if self.map[pkg_pos].lock.acquire(False):
+				print '++++++++++++++++++++++++++%s want %s and aquires %s' %(self.id, pkg, pkg_pos)
+				isMine = True
+				for c in self.neighbours:
+					if c.isInArea(pkg_pos):
+						packageNeighbours.append(c)
+				msg = Message(self, Message.NEGOTIATE_OWNERSHIP, [pkg, self.averageTime, self.hops]) 
+				for crane in packageNeighbours:
+					self.sendMessageInst(crane, msg)
+					while(self.negotiate.empty()):
+						sleep(0.2)
+						self.readMessages()
+					ans = self.negotiate.get()
+					if ans.type == Message.NEGOTIATE_ANSWER:
+						answer = ans.data[0]
+						if answer == 'yes':
+							isMine = True
+						elif answer == 'no':
+							isMine = False							
+							self.wanted.remove(pkg)
+							self.map[pkg_pos].lock.release()
+							print '---------no---------------%s relises %s and removes %s from wanted. lost to %s' %(self.id, pkg_pos, pkg, crane.id)
+							break
+			else:
+				continue					
+			if isMine:
+				pkgLvl = self.getPackageLevel(pkg)
+				if resLvl > pkgLvl:
+					res = pkg
+					resLvl = pkgLvl
+				break
 		return res
 
 
